@@ -148,10 +148,8 @@
                 </div>
               </div>
 
-              <div class="mt-3 flex items-center justify-between text-xs text-gray-500">
-                <span class="inline-block px-2 py-1 rounded bg-gray-100 font-mono">
-                  #{{ card.id.slice(0, 6) }}
-                </span>
+              <div class="mt-3 flex items- justify-end text-xs text-gray-500">
+                
                 <span class="text-xs">
                   {{ formatDate(card.createdAt) }}
                 </span>
