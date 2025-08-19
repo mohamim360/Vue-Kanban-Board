@@ -1,239 +1,421 @@
 <template>
-  <div class="min-h-screen bg-gray-50 p-6">
-    <div class="mx-auto">
-      <header class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
+  <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
+    <div class="mx-auto text-gray-800 dark:text-gray-100">
+      <header
+        class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4"
+      >
         <div>
-          <h1 class="text-2xl font-bold text-gray-800">Project Kanban Board</h1>
-          <p class="text-gray-500 text-sm">Drag and drop cards between columns</p>
+          <h1 class="text-2xl font-bold text-gray-800 dark:text-gray-100">
+            Project Kanban Board
+          </h1>
+          <p class="text-gray-500 dark:text-gray-400 text-sm">
+            Drag and drop cards between columns
+          </p>
         </div>
-        <button @click="showAddModal = true"
-          class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg shadow-sm transition-colors flex items-center gap-2">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-            <path fill-rule="evenodd"
-              d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
-              clip-rule="evenodd" />
-          </svg>
-          Add Task
-        </button>
+
+        <div class="flex items-center gap-3">
+          <!-- Add Task Button -->
+          <button
+            @click="showAddModal = true"
+            class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-100 rounded-lg shadow-sm transition-colors flex items-center gap-2"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-5 w-5"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
+                clip-rule="evenodd"
+              />
+            </svg>
+            Add Task
+          </button>
+
+          <!-- Dark Mode Toggle -->
+          <button
+            @click="toggleDark()"
+            class="p-2 rounded-lg bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-100 shadow-sm transition-colors"
+          >
+           <MoonIcon v-if="isDark" class="h-5 w-5" />
+  <SunIcon v-else class="h-5 w-5" />
+          </button>
+        </div>
       </header>
 
       <!-- Kanban Columns -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div v-for="column in columnsOrder" :key="column" class="flex flex-col">
-          <div class="flex items-center justify-between mb-4 p-3 rounded-t-lg"
+          <div
+            class="flex items-center justify-between mb-4 p-3 rounded-t-lg transition-colors"
             :class="{
-              'bg-blue-100': column === 'todo',
-              'bg-yellow-100': column === 'inprogress',
-              'bg-green-100': column === 'done',
-            }">
-            <h2 class="font-semibold text-gray-800 flex items-center gap-2">
-              <span v-if="column === 'todo'" class="w-3 h-3 rounded-full bg-blue-500"></span>
-              <span v-if="column === 'inprogress'" class="w-3 h-3 rounded-full bg-yellow-500"></span>
-              <span v-if="column === 'done'" class="w-3 h-3 rounded-full bg-green-500"></span>
+              'bg-blue-100 dark:bg-blue-900/40': column === 'todo',
+              'bg-yellow-100 dark:bg-yellow-900/40': column === 'inprogress',
+              'bg-green-100 dark:bg-green-900/40': column === 'done',
+            }"
+          >
+            <h2
+              class="font-semibold text-gray-800 dark:text-gray-100 flex items-center gap-2"
+            >
+              <span
+                v-if="column === 'todo'"
+                class="w-3 h-3 rounded-full bg-blue-500"
+              ></span>
+              <span
+                v-if="column === 'inprogress'"
+                class="w-3 h-3 rounded-full bg-yellow-500"
+              ></span>
+              <span
+                v-if="column === 'done'"
+                class="w-3 h-3 rounded-full bg-green-500"
+              ></span>
               {{ columns[column].name }}
             </h2>
-            <span class="text-sm font-medium px-2 py-1 rounded-full bg-white bg-opacity-70">
+            <span
+              class="text-sm font-medium px-2 py-1 rounded-full bg-white dark:bg-gray-800 bg-opacity-70 dark:bg-opacity-70 text-gray-800 dark:text-gray-200"
+            >
               {{ columns[column].cards.length }}
             </span>
           </div>
 
-          <div class="bg-white rounded-b-lg shadow-sm p-4 flex-1 min-h-[200px] border border-t-0"
+          <div
+            class="bg-white dark:bg-gray-800 rounded-b-lg shadow-sm p-4 flex-1 min-h-[200px] border border-t-0 transition-colors"
             :class="{
-              'border-blue-200': column === 'todo',
-              'border-yellow-200': column === 'inprogress',
-              'border-green-200': column === 'done',
+              'border-blue-200 dark:border-blue-700': column === 'todo',
+              'border-yellow-200 dark:border-yellow-700':
+                column === 'inprogress',
+              'border-green-200 dark:border-green-700': column === 'done',
             }"
             @dragover.prevent
-            @drop="onDrop($event, column)">
-            <div v-if="columns[column].cards.length === 0"
-              class="text-gray-400 text-sm italic py-8 text-center border-2 border-dashed rounded-lg"
+            @drop="onDrop($event, column)"
+          >
+            <!-- Empty state -->
+            <div
+              v-if="columns[column].cards.length === 0"
+              class="text-gray-400 dark:text-gray-500 text-sm italic py-8 text-center border-2 border-dashed rounded-lg"
               :class="{
-                'border-blue-100': column === 'todo',
-                'border-yellow-100': column === 'inprogress',
-                'border-green-100': column === 'done',
-              }">
+                'border-blue-100 dark:border-blue-700/40': column === 'todo',
+                'border-yellow-100 dark:border-yellow-700/40':
+                  column === 'inprogress',
+                'border-green-100 dark:border-green-700/40': column === 'done',
+              }"
+            >
               Drop cards here
             </div>
 
             <!-- Card -->
-            <div v-for="card in sortedCards(column)" :key="card.id"
-              class="group bg-white rounded-lg p-4 mb-4 cursor-grab border hover:border-gray-300 transition-all shadow-sm hover:shadow-md"
+            <div
+              v-for="card in sortedCards(column)"
+              :key="card.id"
+              class="group bg-white dark:bg-gray-700 rounded-xl p-4 mb-4 cursor-grab border hover:border-gray-300 dark:hover:border-gray-500 transition-all shadow-sm hover:shadow-md relative"
               :class="{
-                'border-blue-100': column === 'todo',
-                'border-yellow-100': column === 'inprogress',
-                'border-green-100': column === 'done',
+                'border-blue-100 dark:border-blue-700': column === 'todo',
+                'border-yellow-100 dark:border-yellow-700':
+                  column === 'inprogress',
+                'border-green-100 dark:border-green-700': column === 'done',
               }"
-              draggable="true" @dragstart="onDragStart($event, card.id, column)" @dragend="onDragEnd">
-              <div class="flex items-start justify-between gap-2">
+              draggable="true"
+              @dragstart="onDragStart($event, card.id, column)"
+              @dragend="onDragEnd"
+            >
+              <!-- Priority bar -->
+              <div
+                class="absolute top-0 left-0 h-1.5 w-full rounded-t-xl"
+                :class="{
+                  'bg-red-700': card.priority === 'high',
+                  'bg-orange-600': card.priority === 'medium',
+                  'bg-slate-500': card.priority === 'low',
+                }"
+              ></div>
+
+              <div class="flex items-start justify-between gap-2 pt-1">
                 <div class="flex-1">
-                  <div class="font-semibold text-gray-800 mb-1">{{ card.title }}</div>
-                  <div class="text-xs font-medium mb-2"
-                    :class="{
-                      'text-red-500': card.priority === 'high',
-                      'text-yellow-500': card.priority === 'medium',
-                      'text-green-500': card.priority === 'low',
-                    }">
-                    {{ card.priority }} priority
+                  <!-- Title -->
+                  <div class="flex items-start justify-between mb-2">
+                    <div
+                      class="font-semibold text-gray-800 dark:text-gray-100 pr-4"
+                    >
+                      {{ card.title }}
+                    </div>
+                    <div
+                      class="flex-shrink-0 px-2 py-1 text-xs font-medium rounded-full"
+                      :class="{
+                        'bg-red-200 text-red-800 dark:bg-red-900 dark:text-red-200':
+                          card.priority === 'high',
+                        'bg-orange-200 text-orange-800 dark:bg-orange-900 dark:text-orange-200':
+                          card.priority === 'medium',
+                        'bg-slate-300 text-slate-800 dark:bg-slate-800 dark:text-slate-200':
+                          card.priority === 'low',
+                      }"
+                    >
+                      {{ card.priority }} priority
+                    </div>
                   </div>
-                  <div v-if="card.description" class="text-sm text-gray-600 bg-gray-50 p-2 rounded mb-3">
+
+                  <!-- Description -->
+                  <div
+                    v-if="card.description"
+                    class="text-sm text-gray-600 dark:text-gray-300 mb-3 line-clamp-2"
+                  >
                     {{ card.description }}
                   </div>
-                  <div v-if="card.tags && card.tags.length" class="flex flex-wrap gap-1 mb-2">
-                    <span v-for="tag in card.tags" :key="tag"
-                      class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-600">
+
+                  <!-- Tags -->
+                  <div
+                    v-if="card.tags && card.tags.length"
+                    class="flex flex-wrap gap-1.5 mb-3"
+                  >
+                    <span
+                      v-for="tag in card.tags"
+                      :key="tag"
+                      class="px-2.5 py-1 text-xs font-medium rounded-full border bg-teal-100 dark:bg-teal-900"
+                    >
                       {{ tag }}
                     </span>
                   </div>
                 </div>
-
-                <!-- Dropdown -->
-                <div class="relative">
-                  <button @click.stop="toggleDropdown(card.id)"
-                    class="p-1 rounded hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                      <path
-                        d="M6 10a2 2 0 11-4 0 2 2 0 014 0zm6 0a2 2 0 11-4 0 2 2 0 014 0zm6 0a2 2 0 11-4 0 2 2 0 014 0z" />
-                    </svg>
-                  </button>
-
-                  <div v-if="dropdownOpen === card.id"
-                    class="absolute right-0 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-20 divide-y divide-gray-100">
-                    <div class="p-2 text-xs font-medium text-gray-500 uppercase tracking-wider">Move to</div>
-                    <div>
-                      <button v-for="colKey in columnsOrder.filter((c) => c !== column)" :key="colKey"
-                        @click="moveCard(card.id, colKey)"
-                        class="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm flex items-center gap-2">
-                        <span class="w-2 h-2 rounded-full"
-                          :class="{
-                            'bg-blue-500': colKey === 'todo',
-                            'bg-yellow-500': colKey === 'inprogress',
-                            'bg-green-500': colKey === 'done'
-                          }"></span>
-                        {{ columns[colKey].name }}
-                      </button>
-                    </div>
-                    <div class="p-2">
-                      <button @click="startEdit(card, column)"
-                        class="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm flex items-center gap-2">
-                        ✏ Edit
-                      </button>
-                      <button @click="showDeleteModal(card.id)"
-                        class="w-full text-left px-4 py-2 text-red-600 hover:bg-gray-50 text-sm flex items-center gap-2">
-                        🗑 Delete
-                      </button>
-                    </div>
-                  </div>
-                </div>
               </div>
-              <div class="mt-2 text-xs text-gray-500">{{ formatDate(card.createdAt) }}</div>
+
+              <!-- Date footer -->
+              <div
+                class="flex items-center justify-between mt-3 pt-2 border-t border-gray-100 dark:border-gray-600"
+              >
+                <div class="text-xs text-gray-500 dark:text-gray-400">
+                  {{ formatDate(card.createdAt) }}
+                </div>
+                <div
+                  class="w-2 h-2 rounded-full"
+                  :class="{
+                    'bg-blue-500': column === 'todo',
+                    'bg-yellow-500': column === 'inprogress',
+                    'bg-green-500': column === 'done',
+                  }"
+                ></div>
+              </div>
             </div>
           </div>
         </div>
       </div>
-
       <!-- Add Task Modal -->
-      <div v-if="showAddModal" class="fixed inset-0 flex items-center justify-center z-50 p-4">
-        <div class="absolute inset-0 bg-black bg-opacity-40" @click="showAddModal = false"></div>
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md z-50 overflow-hidden">
+      <div
+        v-if="showAddModal"
+        class="fixed inset-0 flex items-center justify-center z-50 p-4"
+      >
+        <div
+          class="absolute inset-0 bg-black bg-opacity-40"
+          @click="showAddModal = false"
+        ></div>
+        <div
+          class="bg-white rounded-xl shadow-2xl w-full max-w-md z-50 overflow-hidden"
+        >
           <div class="p-6">
-            <h3 class="text-lg font-semibold text-gray-800 mb-4">Add New Task</h3>
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">
+              Add New Task
+            </h3>
             <div class="space-y-4">
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Title*</label>
-                <input v-model="newTask.title"
+                <label class="block text-sm font-medium text-gray-700 mb-1"
+                  >Title*</label
+                >
+                <input
+                  v-model="newTask.title"
                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                  placeholder="Task title" required />
+                  placeholder="Task title"
+                  required
+                />
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                <textarea v-model="newTask.description"
+                <label class="block text-sm font-medium text-gray-700 mb-1"
+                  >Description</label
+                >
+                <textarea
+                  v-model="newTask.description"
                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                  rows="4" placeholder="Task description"></textarea>
+                  rows="4"
+                  placeholder="Task description"
+                ></textarea>
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Tags</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1"
+                  >Tags</label
+                >
                 <TagInput v-model:tags="newTask.tags" />
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Priority*</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1"
+                  >Priority*</label
+                >
                 <div class="flex gap-4">
                   <label class="flex items-center gap-2">
-                    <input type="radio" v-model="newTask.priority" value="high" /> High
+                    <input
+                      type="radio"
+                      v-model="newTask.priority"
+                      value="high"
+                    />
+                    High
                   </label>
                   <label class="flex items-center gap-2">
-                    <input type="radio" v-model="newTask.priority" value="medium" /> Medium
+                    <input
+                      type="radio"
+                      v-model="newTask.priority"
+                      value="medium"
+                    />
+                    Medium
                   </label>
                   <label class="flex items-center gap-2">
-                    <input type="radio" v-model="newTask.priority" value="low" /> Low
+                    <input
+                      type="radio"
+                      v-model="newTask.priority"
+                      value="low"
+                    />
+                    Low
                   </label>
                 </div>
               </div>
             </div>
           </div>
           <div class="bg-gray-50 px-6 py-4 flex justify-end gap-3">
-            <button @click="showAddModal = false" class="px-4 py-2">Cancel</button>
-            <button @click="addNewTask" class="px-4 py-2 bg-indigo-600 text-white rounded-lg">Add Task</button>
+            <button @click="showAddModal = false" class="px-4 py-2">
+              Cancel
+            </button>
+            <button
+              @click="addNewTask"
+              class="px-4 py-2 bg-indigo-600 text-white rounded-lg"
+            >
+              Add Task
+            </button>
           </div>
         </div>
       </div>
 
       <!-- Edit Modal -->
-      <div v-if="editing" class="fixed inset-0 flex items-center justify-center z-50 p-4">
-        <div class="absolute inset-0 bg-black bg-opacity-40" @click="closeEdit"></div>
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md z-50 overflow-hidden">
+      <div
+        v-if="editing"
+        class="fixed inset-0 flex items-center justify-center z-50 p-4"
+      >
+        <div
+          class="absolute inset-0 bg-black bg-opacity-40"
+          @click="closeEdit"
+        ></div>
+        <div
+          class="bg-white rounded-xl shadow-2xl w-full max-w-md z-50 overflow-hidden"
+        >
           <div class="p-6">
             <h3 class="text-lg font-semibold text-gray-800 mb-4">Edit Task</h3>
             <div class="space-y-4">
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Title*</label>
-                <input v-model="editForm.title"
-                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" />
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                <textarea v-model="editForm.description"
+                <label class="block text-sm font-medium text-gray-700 mb-1"
+                  >Title*</label
+                >
+                <input
+                  v-model="editForm.title"
                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                  rows="4"></textarea>
+                />
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Tags</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1"
+                  >Description</label
+                >
+                <textarea
+                  v-model="editForm.description"
+                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  rows="4"
+                ></textarea>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1"
+                  >Tags</label
+                >
                 <TagInput v-model:tags="editForm.tags" />
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Priority*</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1"
+                  >Priority*</label
+                >
                 <div class="flex gap-4">
-                  <label><input type="radio" v-model="editForm.priority" value="high" /> High</label>
-                  <label><input type="radio" v-model="editForm.priority" value="medium" /> Medium</label>
-                  <label><input type="radio" v-model="editForm.priority" value="low" /> Low</label>
+                  <label
+                    ><input
+                      type="radio"
+                      v-model="editForm.priority"
+                      value="high"
+                    />
+                    High</label
+                  >
+                  <label
+                    ><input
+                      type="radio"
+                      v-model="editForm.priority"
+                      value="medium"
+                    />
+                    Medium</label
+                  >
+                  <label
+                    ><input
+                      type="radio"
+                      v-model="editForm.priority"
+                      value="low"
+                    />
+                    Low</label
+                  >
                 </div>
               </div>
             </div>
           </div>
           <div class="bg-gray-50 px-6 py-4 flex justify-end gap-3">
             <button @click="closeEdit">Cancel</button>
-            <button @click="saveEdit" class="px-4 py-2 bg-indigo-600 text-white rounded-lg">Save</button>
+            <button
+              @click="saveEdit"
+              class="px-4 py-2 bg-indigo-600 text-white rounded-lg"
+            >
+              Save
+            </button>
           </div>
         </div>
       </div>
 
       <!-- Delete Confirmation Modal -->
-      <div v-if="showDeleteConfirmation" class="fixed inset-0 flex items-center justify-center z-50 p-4">
-        <div class="absolute inset-0 bg-black bg-opacity-40" @click="showDeleteConfirmation = false"></div>
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md z-50 overflow-hidden">
+      <div
+        v-if="showDeleteConfirmation"
+        class="fixed inset-0 flex items-center justify-center z-50 p-4"
+      >
+        <div
+          class="absolute inset-0 bg-black bg-opacity-40"
+          @click="showDeleteConfirmation = false"
+        ></div>
+        <div
+          class="bg-white rounded-xl shadow-2xl w-full max-w-md z-50 overflow-hidden"
+        >
           <div class="p-6">
-            <h3 class="text-lg font-semibold text-gray-800 mb-4">Delete Task</h3>
-            <p class="text-gray-600">Are you sure you want to delete this task? This action cannot be undone.</p>
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">
+              Delete Task
+            </h3>
+            <p class="text-gray-600">
+              Are you sure you want to delete this task? This action cannot be
+              undone.
+            </p>
           </div>
           <div class="bg-gray-50 px-6 py-4 flex justify-end gap-3">
-            <button @click="showDeleteConfirmation = false" class="px-4 py-2">Cancel</button>
-            <button @click="confirmDelete" class="px-4 py-2 bg-red-600 text-white rounded-lg">Delete</button>
+            <button @click="showDeleteConfirmation = false" class="px-4 py-2">
+              Cancel
+            </button>
+            <button
+              @click="confirmDelete"
+              class="px-4 py-2 bg-red-600 text-white rounded-lg"
+            >
+              Delete
+            </button>
           </div>
         </div>
       </div>
 
       <!-- Toast Notification -->
       <div v-if="toast.show" class="fixed bottom-4 right-4 z-50">
-        <div class="px-6 py-3 rounded-lg shadow-lg text-white" :class="toastClass">
+        <div
+          class="px-6 py-3 rounded-lg shadow-lg text-white"
+          :class="toastClass"
+        >
           {{ toast.message }}
         </div>
       </div>
@@ -244,7 +426,11 @@
 <script setup>
 import { reactive, ref, onMounted, computed } from "vue";
 import TagInput from "./TagInput.vue";
+import { useDark, useToggle } from "@vueuse/core";
+import { SunIcon, MoonIcon } from '@heroicons/vue/24/solid'
 
+const isDark = useDark(); // reactive boolean
+const toggleDark = useToggle(isDark);
 const uid = () => Math.random().toString(36).slice(2, 10);
 const now = () => new Date().toISOString();
 const STORAGE_KEY = "vue-kanban-state";
@@ -280,13 +466,13 @@ const toast = reactive({
 
 const toastClass = computed(() => {
   return {
-    'bg-green-500': toast.type === 'success',
-    'bg-red-500': toast.type === 'error',
-    'bg-blue-500': toast.type === 'info',
+    "bg-green-500": toast.type === "success",
+    "bg-red-500": toast.type === "error",
+    "bg-blue-500": toast.type === "info",
   };
 });
 
-function showToast(message, type = 'success') {
+function showToast(message, type = "success") {
   toast.message = message;
   toast.type = type;
   toast.show = true;
@@ -307,7 +493,7 @@ const editForm = reactive({
 
 function addNewTask() {
   if (!newTask.title.trim()) {
-    showToast('Task title is required', 'error');
+    showToast("Task title is required", "error");
     return;
   }
 
@@ -324,7 +510,7 @@ function addNewTask() {
   showAddModal.value = false;
   resetNewTaskForm();
   save();
-  showToast('Task added successfully');
+  showToast("Task added successfully");
 }
 
 function resetNewTaskForm() {
@@ -392,7 +578,7 @@ function load() {
     }
   } catch (e) {
     console.error("Failed to load state", e);
-    showToast('Failed to load saved data', 'error');
+    showToast("Failed to load saved data", "error");
   }
 }
 
@@ -403,7 +589,7 @@ function save() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
   } catch (e) {
     console.error("Failed to save state", e);
-    showToast('Failed to save data', 'error');
+    showToast("Failed to save data", "error");
   }
 }
 
@@ -480,7 +666,7 @@ function confirmDelete() {
       if (i > -1) {
         columns[k].cards.splice(i, 1);
         save();
-        showToast('Task deleted successfully');
+        showToast("Task deleted successfully");
         break;
       }
     }
@@ -519,7 +705,7 @@ function saveEdit() {
 
   editing.value = false;
   save();
-  showToast('Task updated successfully');
+  showToast("Task updated successfully");
 }
 
 function formatDate(iso) {
