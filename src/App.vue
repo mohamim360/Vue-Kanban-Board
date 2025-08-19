@@ -39,8 +39,8 @@
             @click="toggleDark()"
             class="p-2 rounded-lg bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-100 shadow-sm transition-colors"
           >
-           <MoonIcon v-if="isDark" class="h-5 w-5" />
-  <SunIcon v-else class="h-5 w-5" />
+            <MoonIcon v-if="isDark" class="h-5 w-5" />
+            <SunIcon v-else class="h-5 w-5" />
           </button>
         </div>
       </header>
@@ -139,18 +139,74 @@
                     >
                       {{ card.title }}
                     </div>
-                    <div
-                      class="flex-shrink-0 px-2 py-1 text-xs font-medium rounded-full"
-                      :class="{
-                        'bg-red-200 text-red-800 dark:bg-red-900 dark:text-red-200':
-                          card.priority === 'high',
-                        'bg-orange-200 text-orange-800 dark:bg-orange-900 dark:text-orange-200':
-                          card.priority === 'medium',
-                        'bg-slate-300 text-slate-800 dark:bg-slate-800 dark:text-slate-200':
-                          card.priority === 'low',
-                      }"
-                    >
-                      {{ card.priority }} priority
+
+                    <div class="flex items-center gap-2">
+                      <div
+                        class="flex-shrink-0 px-2 py-1 text-xs font-medium rounded-full"
+                        :class="{
+                          'bg-red-200 text-red-800 dark:bg-red-900 dark:text-red-200':
+                            card.priority === 'high',
+                          'bg-orange-200 text-orange-800 dark:bg-orange-900 dark:text-orange-200':
+                            card.priority === 'medium',
+                          'bg-slate-300 text-slate-800 dark:bg-slate-800 dark:text-slate-200':
+                            card.priority === 'low',
+                        }"
+                      >
+                        {{ card.priority }} priority
+                      </div>
+
+                      <div class="relative">
+  <button
+    @click.stop="toggleDropdown(card.id)"
+    class="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-100 transition-colors"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+      <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zm6 0a2 2 0 11-4 0 2 2 0 014 0zm6 0a2 2 0 11-4 0 2 2 0 014 0z"/>
+    </svg>
+  </button>
+
+  <div
+    v-if="dropdownOpen === card.id"
+    class="absolute right-0 mt-1 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-20 divide-y divide-gray-100 dark:divide-gray-700"
+  >
+    <div class="p-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+      Move to
+    </div>
+    <div>
+      <button
+        v-for="colKey in columnsOrder.filter((c) => c !== column)"
+        :key="colKey"
+        @click="moveCard(card.id, colKey)"
+        class="w-full text-left px-4 py-2 text-sm flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-700"
+      >
+        <span
+          class="w-2 h-2 rounded-full"
+          :class="{
+            'bg-blue-500': colKey === 'todo',
+            'bg-yellow-500': colKey === 'inprogress',
+            'bg-green-500': colKey === 'done',
+          }"
+        ></span>
+        {{ columns[colKey].name }}
+      </button>
+    </div>
+    <div class="p-2">
+      <button
+        @click="startEdit(card, column)"
+        class="w-full text-left px-4 py-2 text-sm flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-700"
+      >
+        ✏ Edit
+      </button>
+      <button
+        @click="showDeleteModal(card.id)"
+        class="w-full text-left px-4 py-2 text-red-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-sm flex items-center gap-2"
+      >
+        🗑 Delete
+      </button>
+    </div>
+  </div>
+</div>
+
                     </div>
                   </div>
 
@@ -198,217 +254,138 @@
           </div>
         </div>
       </div>
-      <!-- Add Task Modal -->
-      <div
-        v-if="showAddModal"
-        class="fixed inset-0 flex items-center justify-center z-50 p-4"
-      >
-        <div
-          class="absolute inset-0 bg-black bg-opacity-40"
-          @click="showAddModal = false"
-        ></div>
-        <div
-          class="bg-white rounded-xl shadow-2xl w-full max-w-md z-50 overflow-hidden"
-        >
-          <div class="p-6">
-            <h3 class="text-lg font-semibold text-gray-800 mb-4">
-              Add New Task
-            </h3>
-            <div class="space-y-4">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1"
-                  >Title*</label
-                >
-                <input
-                  v-model="newTask.title"
-                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                  placeholder="Task title"
-                  required
-                />
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1"
-                  >Description</label
-                >
-                <textarea
-                  v-model="newTask.description"
-                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                  rows="4"
-                  placeholder="Task description"
-                ></textarea>
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1"
-                  >Tags</label
-                >
-                <TagInput v-model:tags="newTask.tags" />
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1"
-                  >Priority*</label
-                >
-                <div class="flex gap-4">
-                  <label class="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      v-model="newTask.priority"
-                      value="high"
-                    />
-                    High
-                  </label>
-                  <label class="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      v-model="newTask.priority"
-                      value="medium"
-                    />
-                    Medium
-                  </label>
-                  <label class="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      v-model="newTask.priority"
-                      value="low"
-                    />
-                    Low
-                  </label>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="bg-gray-50 px-6 py-4 flex justify-end gap-3">
-            <button @click="showAddModal = false" class="px-4 py-2">
-              Cancel
-            </button>
-            <button
-              @click="addNewTask"
-              class="px-4 py-2 bg-indigo-600 text-white rounded-lg"
-            >
-              Add Task
-            </button>
+     <!-- Add Modal -->
+<div
+  v-if="showAddModal"
+  class="fixed inset-0 flex items-center justify-center z-50 p-4"
+>
+  <div
+    class="absolute inset-0 bg-black bg-opacity-40"
+    @click="showAddModal = false"
+  ></div>
+  <div
+    class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md z-50 overflow-hidden"
+  >
+    <div class="p-6">
+      <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">
+        Add New Task
+      </h3>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Title*</label>
+          <input
+            v-model="newTask.title"
+            class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-gray-100"
+            placeholder="Task title"
+            required
+          />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
+          <textarea
+            v-model="newTask.description"
+            class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-gray-100"
+            rows="4"
+            placeholder="Task description"
+          ></textarea>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tags</label>
+          <TagInput v-model:tags="newTask.tags" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Priority*</label>
+          <div class="flex gap-4 text-gray-700 dark:text-gray-300">
+            <label class="flex items-center gap-2"><input type="radio" v-model="newTask.priority" value="high" />High</label>
+            <label class="flex items-center gap-2"><input type="radio" v-model="newTask.priority" value="medium" />Medium</label>
+            <label class="flex items-center gap-2"><input type="radio" v-model="newTask.priority" value="low" />Low</label>
           </div>
         </div>
       </div>
+    </div>
+    <div class="bg-gray-50 dark:bg-gray-700 px-6 py-4 flex justify-end gap-3">
+      <button @click="showAddModal = false" class="px-4 py-2 text-gray-700 dark:text-gray-200">Cancel</button>
+      <button @click="addNewTask" class="px-4 py-2 bg-indigo-600 text-white rounded-lg">Add Task</button>
+    </div>
+  </div>
+</div>
 
-      <!-- Edit Modal -->
-      <div
-        v-if="editing"
-        class="fixed inset-0 flex items-center justify-center z-50 p-4"
-      >
-        <div
-          class="absolute inset-0 bg-black bg-opacity-40"
-          @click="closeEdit"
-        ></div>
-        <div
-          class="bg-white rounded-xl shadow-2xl w-full max-w-md z-50 overflow-hidden"
-        >
-          <div class="p-6">
-            <h3 class="text-lg font-semibold text-gray-800 mb-4">Edit Task</h3>
-            <div class="space-y-4">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1"
-                  >Title*</label
-                >
-                <input
-                  v-model="editForm.title"
-                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1"
-                  >Description</label
-                >
-                <textarea
-                  v-model="editForm.description"
-                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                  rows="4"
-                ></textarea>
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1"
-                  >Tags</label
-                >
-                <TagInput v-model:tags="editForm.tags" />
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1"
-                  >Priority*</label
-                >
-                <div class="flex gap-4">
-                  <label
-                    ><input
-                      type="radio"
-                      v-model="editForm.priority"
-                      value="high"
-                    />
-                    High</label
-                  >
-                  <label
-                    ><input
-                      type="radio"
-                      v-model="editForm.priority"
-                      value="medium"
-                    />
-                    Medium</label
-                  >
-                  <label
-                    ><input
-                      type="radio"
-                      v-model="editForm.priority"
-                      value="low"
-                    />
-                    Low</label
-                  >
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="bg-gray-50 px-6 py-4 flex justify-end gap-3">
-            <button @click="closeEdit">Cancel</button>
-            <button
-              @click="saveEdit"
-              class="px-4 py-2 bg-indigo-600 text-white rounded-lg"
-            >
-              Save
-            </button>
+<!-- Edit Modal -->
+<div
+  v-if="editing"
+  class="fixed inset-0 flex items-center justify-center z-50 p-4"
+>
+  <div
+    class="absolute inset-0 bg-black bg-opacity-40"
+    @click="closeEdit"
+  ></div>
+  <div
+    class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md z-50 overflow-hidden"
+  >
+    <div class="p-6">
+      <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">Edit Task</h3>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Title*</label>
+          <input
+            v-model="editForm.title"
+            class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-gray-100"
+          />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
+          <textarea
+            v-model="editForm.description"
+            class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-gray-100"
+            rows="4"
+          ></textarea>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tags</label>
+          <TagInput v-model:tags="editForm.tags" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Priority*</label>
+          <div class="flex gap-4 text-gray-700 dark:text-gray-300">
+            <label><input type="radio" v-model="editForm.priority" value="high" />High</label>
+            <label><input type="radio" v-model="editForm.priority" value="medium" />Medium</label>
+            <label><input type="radio" v-model="editForm.priority" value="low" />Low</label>
           </div>
         </div>
       </div>
+    </div>
+    <div class="bg-gray-50 dark:bg-gray-700 px-6 py-4 flex justify-end gap-3">
+      <button @click="closeEdit" class="text-gray-700 dark:text-gray-200 px-4 py-2">Cancel</button>
+      <button @click="saveEdit" class="px-4 py-2 bg-indigo-600 text-white rounded-lg">Save</button>
+    </div>
+  </div>
+</div>
 
-      <!-- Delete Confirmation Modal -->
-      <div
-        v-if="showDeleteConfirmation"
-        class="fixed inset-0 flex items-center justify-center z-50 p-4"
-      >
-        <div
-          class="absolute inset-0 bg-black bg-opacity-40"
-          @click="showDeleteConfirmation = false"
-        ></div>
-        <div
-          class="bg-white rounded-xl shadow-2xl w-full max-w-md z-50 overflow-hidden"
-        >
-          <div class="p-6">
-            <h3 class="text-lg font-semibold text-gray-800 mb-4">
-              Delete Task
-            </h3>
-            <p class="text-gray-600">
-              Are you sure you want to delete this task? This action cannot be
-              undone.
-            </p>
-          </div>
-          <div class="bg-gray-50 px-6 py-4 flex justify-end gap-3">
-            <button @click="showDeleteConfirmation = false" class="px-4 py-2">
-              Cancel
-            </button>
-            <button
-              @click="confirmDelete"
-              class="px-4 py-2 bg-red-600 text-white rounded-lg"
-            >
-              Delete
-            </button>
-          </div>
-        </div>
-      </div>
+<!-- Delete Modal -->
+<div
+  v-if="showDeleteConfirmation"
+  class="fixed inset-0 flex items-center justify-center z-50 p-4"
+>
+  <div
+    class="absolute inset-0 bg-black bg-opacity-40"
+    @click="showDeleteConfirmation = false"
+  ></div>
+  <div
+    class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md z-50 overflow-hidden"
+  >
+    <div class="p-6">
+      <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">Delete Task</h3>
+      <p class="text-gray-600 dark:text-gray-300">
+        Are you sure you want to delete this task? This action cannot be undone.
+      </p>
+    </div>
+    <div class="bg-gray-50 dark:bg-gray-700 px-6 py-4 flex justify-end gap-3">
+      <button @click="showDeleteConfirmation = false" class="px-4 py-2 text-gray-700 dark:text-gray-200">Cancel</button>
+      <button @click="confirmDelete" class="px-4 py-2 bg-red-600 text-white rounded-lg">Delete</button>
+    </div>
+  </div>
+</div>
+
 
       <!-- Toast Notification -->
       <div v-if="toast.show" class="fixed bottom-4 right-4 z-50">
@@ -427,7 +404,7 @@
 import { reactive, ref, onMounted, computed } from "vue";
 import TagInput from "./TagInput.vue";
 import { useDark, useToggle } from "@vueuse/core";
-import { SunIcon, MoonIcon } from '@heroicons/vue/24/solid'
+import { SunIcon, MoonIcon } from "@heroicons/vue/24/solid";
 
 const isDark = useDark(); // reactive boolean
 const toggleDark = useToggle(isDark);
