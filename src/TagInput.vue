@@ -1,5 +1,7 @@
 <template>
-  <div class="border border-gray-300 dark:border-gray-600 rounded-lg p-2 flex flex-wrap gap-2 bg-white dark:bg-gray-700">
+  <div
+    class="border border-gray-300 dark:border-gray-600 rounded-lg p-2 flex flex-wrap gap-2 bg-white dark:bg-gray-700"
+  >
     <span
       v-for="(tag, index) in tags"
       :key="tag"
@@ -16,16 +18,19 @@
 
     <input
       v-model="input"
-      @keydown.enter.prevent="addTag"
-      @keydown.tab.prevent="addTag"
-      placeholder="Type and press Enter"
+      @keydown.enter.prevent="handleInput"
+      @keydown.tab.prevent="handleInput"
+      @keydown.space.prevent="handleInput"
+      @keydown.comma.prevent="handleInput"
+      @blur="handleInput"
+      placeholder="Type and press Enter, Space or Comma"
       class="flex-1 min-w-[80px] border-none focus:ring-0 outline-none dark:bg-gray-700 dark:text-gray-100"
     />
   </div>
 </template>
 
 <script setup>
-import { ref } from "vue"; 
+import { ref } from "vue";
 
 const props = defineProps({
   tags: { type: Array, required: true },
@@ -34,11 +39,19 @@ const emit = defineEmits(["update:tags"]);
 
 const input = ref("");
 
-function addTag() {
-  const val = input.value.trim();
-  if (val && !props.tags.includes(val)) {
-    emit("update:tags", [...props.tags, val]);
+function handleInput(event) {
+  // If comma key pressed, prevent it from staying in the input
+  if (event && event.key === ",") event.preventDefault();
+
+  const values = input.value
+    .split(/[\s,]+/) // split by space or comma
+    .map((v) => v.trim())
+    .filter((v) => v.length > 0 && !props.tags.includes(v));
+
+  if (values.length > 0) {
+    emit("update:tags", [...props.tags, ...values]);
   }
+
   input.value = "";
 }
 
