@@ -519,7 +519,7 @@
 
 <script setup>
 import { reactive, ref, onMounted, computed } from "vue";
-import TagInput from "./TagInput.vue";
+import TagInput from "./components/TagInput.vue";
 import { useDark, useToggle } from "@vueuse/core";
 import { SunIcon, MoonIcon } from "@heroicons/vue/24/solid";
 

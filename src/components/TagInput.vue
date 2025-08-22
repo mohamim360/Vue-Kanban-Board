@@ -21,9 +21,8 @@
       @keydown.enter.prevent="handleInput"
       @keydown.tab.prevent="handleInput"
       @keydown.space.prevent="handleInput"
-      @keydown.comma.prevent="handleInput"
       @blur="handleInput"
-      placeholder="Type and press Enter, Space or Comma"
+      placeholder="Type and press Enter, Space or tab"
       class="flex-1 min-w-[80px] border-none focus:ring-0 outline-none dark:bg-gray-700 dark:text-gray-100"
     />
   </div>
@@ -40,7 +39,7 @@ const emit = defineEmits(["update:tags"]);
 const input = ref("");
 
 function handleInput(event) {
-  // If comma key pressed, prevent it from staying in the input
+  // prevent comma from being inserted
   if (event && event.key === ",") event.preventDefault();
 
   const values = input.value
