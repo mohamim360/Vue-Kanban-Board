@@ -111,10 +111,12 @@
               :key="card.id"
               class="group bg-white dark:bg-gray-800 rounded-xl p-4 mb-4 cursor-grab border hover:border-gray-300 dark:hover:border-gray-500 transition-all shadow-sm hover:shadow-md relative"
               :class="{
-                'border-blue-100 dark:border-blue-700 dark:border-t-0': column === 'todo',
+                'border-blue-100 dark:border-blue-700 dark:border-t-0':
+                  column === 'todo',
                 'border-yellow-100 dark:border-yellow-700 dark:border-t-0':
                   column === 'inprogress',
-                'border-green-100 dark:border-green-700 dark:border-t-0': column === 'done',
+                'border-green-100 dark:border-green-700 dark:border-t-0':
+                  column === 'done',
               }"
               draggable="true"
               @dragstart="onDragStart($event, card.id, column)"
@@ -266,202 +268,18 @@
         </div>
       </div>
       <!-- Add Modal -->
-      <div
-        v-if="showAddModal"
-        class="fixed inset-0 flex items-center justify-center z-50 p-4"
-      >
-        <div
-          class="absolute inset-0 bg-black bg-opacity-40"
-          @click="showAddModal = false"
-        ></div>
-        <div
-          class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md z-50 overflow-hidden"
-        >
-          <div class="p-6">
-            <h3
-              class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4"
-            >
-              Add New Task
-            </h3>
-            <div class="space-y-4">
-              <div>
-                <label
-                  class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-                  >Title*</label
-                >
-                <input
-                  v-model="newTask.title"
-                  class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-gray-100"
-                  placeholder="Task title"
-                  required
-                />
-              </div>
-              <div>
-                <label
-                  class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-                  >Description</label
-                >
-                <textarea
-                  v-model="newTask.description"
-                  class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-gray-100"
-                  rows="4"
-                  placeholder="Task description"
-                ></textarea>
-              </div>
-              <div>
-                <label
-                  class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-                  >Tags</label
-                >
-                <TagInput v-model:tags="newTask.tags" />
-              </div>
-              <div>
-                <label
-                  class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-                  >Priority*</label
-                >
-                <div class="flex gap-4 text-gray-700 dark:text-gray-300">
-                  <label class="flex items-center gap-2"
-                    ><input
-                      type="radio"
-                      v-model="newTask.priority"
-                      value="high"
-                    />High</label
-                  >
-                  <label class="flex items-center gap-2"
-                    ><input
-                      type="radio"
-                      v-model="newTask.priority"
-                      value="medium"
-                    />Medium</label
-                  >
-                  <label class="flex items-center gap-2"
-                    ><input
-                      type="radio"
-                      v-model="newTask.priority"
-                      value="low"
-                    />Low</label
-                  >
-                </div>
-              </div>
-            </div>
-          </div>
-          <div
-            class="bg-gray-50 dark:bg-gray-700 px-6 py-4 flex justify-end gap-3"
-          >
-            <button
-              @click="showAddModal = false"
-              class="px-4 py-2 text-gray-700 dark:text-gray-200"
-            >
-              Cancel
-            </button>
-            <button
-              @click="addNewTask"
-              class="px-4 py-2 bg-indigo-600 text-white rounded-lg"
-            >
-              Add Task
-            </button>
-          </div>
-        </div>
-      </div>
+      <AddTaskModal v-model:visible="showAddModal" @add="addNewTask"
+      @error="showToast($event, 'error')"
+      />
 
       <!-- Edit Modal -->
-      <div
-        v-if="editing"
-        class="fixed inset-0 flex items-center justify-center z-50 p-4"
-      >
-        <div
-          class="absolute inset-0 bg-black bg-opacity-40"
-          @click="closeEdit"
-        ></div>
-        <div
-          class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md z-50 overflow-hidden"
-        >
-          <div class="p-6">
-            <h3
-              class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4"
-            >
-              Edit Task
-            </h3>
-            <div class="space-y-4">
-              <div>
-                <label
-                  class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-                  >Title*</label
-                >
-                <input
-                  v-model="editForm.title"
-                  class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-gray-100"
-                />
-              </div>
-              <div>
-                <label
-                  class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-                  >Description</label
-                >
-                <textarea
-                  v-model="editForm.description"
-                  class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-gray-100"
-                  rows="4"
-                ></textarea>
-              </div>
-              <div>
-                <label
-                  class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-                  >Tags</label
-                >
-                <TagInput v-model:tags="editForm.tags" />
-              </div>
-              <div>
-                <label
-                  class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-                  >Priority*</label
-                >
-                <div class="flex gap-4 text-gray-700 dark:text-gray-300">
-                  <label
-                    ><input
-                      type="radio"
-                      v-model="editForm.priority"
-                      value="high"
-                    />High</label
-                  >
-                  <label
-                    ><input
-                      type="radio"
-                      v-model="editForm.priority"
-                      value="medium"
-                    />Medium</label
-                  >
-                  <label
-                    ><input
-                      type="radio"
-                      v-model="editForm.priority"
-                      value="low"
-                    />Low</label
-                  >
-                </div>
-              </div>
-            </div>
-          </div>
-          <div
-            class="bg-gray-50 dark:bg-gray-700 px-6 py-4 flex justify-end gap-3"
-          >
-            <button
-              @click="closeEdit"
-              class="text-gray-700 dark:text-gray-200 px-4 py-2"
-            >
-              Cancel
-            </button>
-            <button
-              @click="saveEdit"
-              class="px-4 py-2 bg-indigo-600 text-white rounded-lg"
-            >
-              Save
-            </button>
-          </div>
-        </div>
-      </div>
 
+      <EditTaskModal
+        v-model:visible="editing"
+        :task="editForm"
+        @save="saveEdit"
+        @error="showToast($event, 'error')"
+      />
       <!-- Delete Modal -->
       <div
         v-if="showDeleteConfirmation"
@@ -522,6 +340,9 @@ import { reactive, ref, onMounted, computed } from "vue";
 import TagInput from "./components/TagInput.vue";
 import { useDark, useToggle } from "@vueuse/core";
 import { SunIcon, MoonIcon } from "@heroicons/vue/24/solid";
+import EditTaskModal from "./components/EditTaskModal.vue";
+import AddTaskModal from "./components/AddTaskModal.vue";
+
 
 const isDark = useDark(); // reactive boolean
 const toggleDark = useToggle(isDark);
@@ -539,17 +360,8 @@ const columnsOrder = ["todo", "inprogress", "done"];
 const dropdownOpen = ref(null);
 const dragging = ref(null);
 const dragFrom = ref(null);
-const showAddModal = ref(false);
 const showDeleteConfirmation = ref(false);
 const cardToDelete = ref(null);
-
-// New task form
-const newTask = reactive({
-  title: "",
-  description: "",
-  tags: [],
-  priority: "medium",
-});
 
 // Toast notification setup
 const toast = reactive({
@@ -585,34 +397,24 @@ const editForm = reactive({
   priority: "medium",
 });
 
-function addNewTask() {
-  if (!newTask.title.trim()) {
-    showToast("Task title is required", "error");
-    return;
-  }
+const showAddModal = ref(false);
 
+// Add new task (called when AddTaskModal emits `add`)
+function addNewTask(task) {
   const card = {
     id: uid(),
-    title: newTask.title.trim(),
-    description: newTask.description.trim(),
-    tags: [...newTask.tags],
-    priority: newTask.priority,
+    title: task.title.trim(),
+    description: task.description.trim(),
+    tags: [...task.tags],
+    priority: task.priority,
     createdAt: now(),
   };
 
   columns.todo.cards.unshift(card);
-  showAddModal.value = false;
-  resetNewTaskForm();
   save();
   showToast("Task added successfully");
 }
 
-function resetNewTaskForm() {
-  newTask.title = "";
-  newTask.description = "";
-  newTask.tags = [];
-  newTask.priority = "medium";
-}
 
 function sortedCards(columnKey) {
   const priorityOrder = { high: 3, medium: 2, low: 1 };
@@ -770,34 +572,26 @@ function confirmDelete() {
 }
 
 function startEdit(card, fromColumn) {
-  editing.value = true;
   editForm.id = card.id;
   editForm.title = card.title;
   editForm.description = card.description || "";
   editForm.tags = [...(card.tags || [])];
-  editForm.priority = card.priority || "medium";
+  editForm.priority = card.priority;
+  editing.value = true;
   dropdownOpen.value = null;
 }
 
-function closeEdit() {
-  editing.value = false;
-}
-
-function saveEdit() {
-  if (!editForm.id) return;
+function saveEdit(updated) {
+  if (!updated.id) return;
 
   for (const k of columnsOrder) {
-    const i = columns[k].cards.findIndex((c) => c.id === editForm.id);
+    const i = columns[k].cards.findIndex((c) => c.id === updated.id);
     if (i > -1) {
-      columns[k].cards[i].title = editForm.title;
-      columns[k].cards[i].description = editForm.description;
-      columns[k].cards[i].tags = [...editForm.tags];
-      columns[k].cards[i].priority = editForm.priority;
+      columns[k].cards[i] = { ...columns[k].cards[i], ...updated };
       break;
     }
   }
 
-  editing.value = false;
   save();
   showToast("Task updated successfully");
 }
