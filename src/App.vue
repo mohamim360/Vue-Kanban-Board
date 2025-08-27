@@ -129,13 +129,13 @@
                   'bg-red-700 dark:bg-red-900': card.priority === 'high',
                   'bg-orange-600 dark:bg-orange-800':
                     card.priority === 'medium',
-                  'bg-slate-500 ': card.priority === 'low',
+                  'bg-slate-500': card.priority === 'low',
                 }"
               ></div>
 
               <div class="flex items-start justify-between gap-2 pt-1">
                 <div class="flex-1">
-                  <!-- Title -->
+                  <!-- Title + Actions -->
                   <div class="flex items-start justify-between mb-2">
                     <div
                       class="font-semibold text-gray-800 dark:text-gray-100 pr-4"
@@ -144,6 +144,7 @@
                     </div>
 
                     <div class="flex items-center gap-2">
+                      <!-- Priority Badge -->
                       <div
                         class="flex-shrink-0 px-2 py-1 text-xs font-medium rounded-full"
                         :class="{
@@ -158,6 +159,7 @@
                         {{ card.priority }} priority
                       </div>
 
+                      <!-- ⋮ Dropdown Menu -->
                       <div class="relative">
                         <button
                           @click.stop="toggleDropdown(card.id)"
@@ -170,15 +172,19 @@
                             fill="currentColor"
                           >
                             <path
-                              d="M6 10a2 2 0 11-4 0 2 2 0 014 0zm6 0a2 2 0 11-4 0 2 2 0 014 0zm6 0a2 2 0 11-4 0 2 2 0 014 0z"
+                              d="M6 10a2 2 0 11-4 0 2 2 0 014 0zm6 0a2 2 0 
+                         11-4 0 2 2 0 014 0zm6 0a2 2 0 11-4 0  
+                         2 2 0 014 0z"
                             />
                           </svg>
                         </button>
 
+                        <!-- Actions Dropdown -->
                         <div
                           v-if="dropdownOpen === card.id"
                           class="absolute right-0 mt-1 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-20 divide-y divide-gray-100 dark:divide-gray-700"
                         >
+                          <!-- Move to -->
                           <div
                             class="p-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
                           >
@@ -204,6 +210,8 @@
                               {{ columns[colKey].name }}
                             </button>
                           </div>
+
+                          <!-- Edit/Delete -->
                           <div class="p-2">
                             <button
                               @click="startEdit(card, column)"
@@ -225,12 +233,10 @@
 
                   <!-- Description -->
                   <div
-                    v-if="card.description"
-                    class="text-sm text-gray-600 dark:text-gray-300 mb-3 line-clamp-2"
-                  >
-                    {{ card.description }}
-                  </div>
-
+                   
+                    class="text-sm text-gray-600 dark:text-gray-300 mb-3 line-clamp-2 prose prose-sm max-w-none"
+                    v-html="sanitizeHtml(card.description)"
+                  ></div>
                   <!-- Tags -->
                   <div
                     v-if="card.tags && card.tags.length"
@@ -244,32 +250,60 @@
                       {{ tag }}
                     </span>
                   </div>
-                </div>
-              </div>
 
-              <!-- Date footer -->
-              <div
-                class="flex items-center justify-between mt-3 pt-2 border-t border-gray-100 dark:border-gray-600"
-              >
-                <div class="text-xs text-gray-500 dark:text-gray-400">
-                  {{ formatDate(card.createdAt) }}
+                  <!-- Due Date & Assigned User -->
+                  <div
+                    class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mb-2"
+                  >
+                    <div v-if="card.dueDate" class="flex items-center gap-1">
+                      📅
+                      <span>{{
+                        new Date(card.dueDate).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                        })
+                      }}</span>
+                    </div>
+                    <div
+                      v-if="card.assignedUser"
+                      class="flex items-center gap-2"
+                    >
+                      <span
+                        class="w-6 h-6 flex items-center justify-center rounded-full bg-indigo-500 text-white text-xs"
+                      >
+                        {{ getUserInitials(card.assignedUser) }}
+                      </span>
+                      <span>{{ getUserName(card.assignedUser) }}</span>
+                    </div>
+                  </div>
+
+                  <!-- Footer: createdAt -->
+                  <div
+                    class="flex items-center justify-between mt-3 pt-2 border-t border-gray-100 dark:border-gray-600"
+                  >
+                    <div class="text-xs text-gray-500 dark:text-gray-400">
+                      {{ formatDate(card.createdAt) }}
+                    </div>
+                    <div
+                      class="w-2 h-2 rounded-full"
+                      :class="{
+                        'bg-blue-500': column === 'todo',
+                        'bg-yellow-500': column === 'inprogress',
+                        'bg-green-500': column === 'done',
+                      }"
+                    ></div>
+                  </div>
                 </div>
-                <div
-                  class="w-2 h-2 rounded-full"
-                  :class="{
-                    'bg-blue-500': column === 'todo',
-                    'bg-yellow-500': column === 'inprogress',
-                    'bg-green-500': column === 'done',
-                  }"
-                ></div>
               </div>
             </div>
           </div>
         </div>
       </div>
       <!-- Add Modal -->
-      <AddTaskModal v-model:visible="showAddModal" @add="addNewTask"
-      @error="showToast($event, 'error')"
+      <AddTaskModal
+        v-model:visible="showAddModal"
+        @add="addNewTask"
+        @error="showToast($event, 'error')"
       />
 
       <!-- Edit Modal -->
@@ -337,12 +371,10 @@
 
 <script setup>
 import { reactive, ref, onMounted, computed } from "vue";
-import TagInput from "./components/TagInput.vue";
 import { useDark, useToggle } from "@vueuse/core";
 import { SunIcon, MoonIcon } from "@heroicons/vue/24/solid";
 import EditTaskModal from "./components/EditTaskModal.vue";
 import AddTaskModal from "./components/AddTaskModal.vue";
-
 
 const isDark = useDark(); // reactive boolean
 const toggleDark = useToggle(isDark);
@@ -350,6 +382,64 @@ const uid = () => Math.random().toString(36).slice(2, 10);
 const now = () => new Date().toISOString();
 const STORAGE_KEY = "vue-kanban-state";
 
+// Replace the stripHtml function with this:
+function sanitizeHtml(html) {
+  if (!html) return "";
+
+  // Create a temporary div element
+  const tmp = document.createElement("div");
+  tmp.innerHTML = html;
+
+  // Remove script tags and other dangerous elements
+  const scripts = tmp.getElementsByTagName("script");
+  for (let i = scripts.length - 1; i >= 0; i--) {
+    scripts[i].remove();
+  }
+
+  // Allow only certain tags
+  const allowedTags = [
+    "b",
+    "i",
+    "u",
+    "strong",
+    "em",
+    "p",
+    "br",
+    "ul",
+    "ol",
+    "li",
+  ];
+  const allElements = tmp.getElementsByTagName("*");
+
+  for (let i = allElements.length - 1; i >= 0; i--) {
+    const el = allElements[i];
+    if (!allowedTags.includes(el.tagName.toLowerCase())) {
+      // Replace disallowed tags with their content
+      el.replaceWith(...el.childNodes);
+    }
+  }
+
+  return tmp.innerHTML;
+}
+
+const demoUsers = [
+  { id: "u1", name: "Alice Johnson" },
+  { id: "u2", name: "Bob Smith" },
+  { id: "u3", name: "Charlie Davis" },
+];
+
+function getUserName(userId) {
+  return demoUsers.find((u) => u.id === userId)?.name || "Unknown";
+}
+
+function getUserInitials(userId) {
+  const name = getUserName(userId);
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase();
+}
 const columns = reactive({
   todo: { name: "To Do", cards: [] },
   inprogress: { name: "In Progress", cards: [] },
@@ -395,18 +485,21 @@ const editForm = reactive({
   description: "",
   tags: [],
   priority: "medium",
+  dueDate: "",
+  assignedUser: "",
 });
 
 const showAddModal = ref(false);
 
-// Add new task (called when AddTaskModal emits `add`)
 function addNewTask(task) {
   const card = {
     id: uid(),
     title: task.title.trim(),
-    description: task.description.trim(),
+    description: task.description || "",
     tags: [...task.tags],
     priority: task.priority,
+    dueDate: task.dueDate || "",
+    assignedUser: task.assignedUser || "",
     createdAt: now(),
   };
 
@@ -414,7 +507,6 @@ function addNewTask(task) {
   save();
   showToast("Task added successfully");
 }
-
 
 function sortedCards(columnKey) {
   const priorityOrder = { high: 3, medium: 2, low: 1 };
@@ -577,6 +669,8 @@ function startEdit(card, fromColumn) {
   editForm.description = card.description || "";
   editForm.tags = [...(card.tags || [])];
   editForm.priority = card.priority;
+  editForm.dueDate = card.dueDate || "";
+  editForm.assignedUser = card.assignedUser || "";
   editing.value = true;
   dropdownOpen.value = null;
 }
@@ -587,7 +681,12 @@ function saveEdit(updated) {
   for (const k of columnsOrder) {
     const i = columns[k].cards.findIndex((c) => c.id === updated.id);
     if (i > -1) {
-      columns[k].cards[i] = { ...columns[k].cards[i], ...updated };
+      // Make sure to preserve the original createdAt date
+      columns[k].cards[i] = {
+        ...columns[k].cards[i],
+        ...updated,
+        createdAt: columns[k].cards[i].createdAt, // Keep original creation date
+      };
       break;
     }
   }
@@ -595,7 +694,6 @@ function saveEdit(updated) {
   save();
   showToast("Task updated successfully");
 }
-
 function formatDate(iso) {
   try {
     const date = new Date(iso);
@@ -625,4 +723,6 @@ function formatDate(iso) {
 .fixed {
   transition: all 0.3s ease;
 }
+
+
 </style>
