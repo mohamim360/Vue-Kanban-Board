@@ -29,12 +29,14 @@
         <!-- Description (Editor) -->
         <div>
           <label class="block text-sm font-medium mb-1">Description</label>
-          <QuillEditor
-            v-model:content="localForm.description"
-            contentType="html"
-            theme="snow"
-           
-          />
+          <div class="border rounded-lg overflow-hidden">
+            <QuillEditor
+              v-model:content="localForm.description"
+              contentType="html"
+              theme="snow"
+              class="w-full"
+            />
+          </div>
         </div>
 
         <!-- Tags -->

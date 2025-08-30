@@ -78,6 +78,14 @@
             >
               {{ columns[column].cards.length }}
             </span>
+             <!-- Delete All Button -->
+    <button
+      v-if="columns[column].cards.length"
+      @click="confirmDeleteAll(column)"
+      class="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-200 text-xs font-medium"
+    >
+      🗑 Delete All
+    </button>
           </div>
 
           <div
@@ -156,7 +164,7 @@
                             card.priority === 'low',
                         }"
                       >
-                        {{ card.priority }} priority
+                        {{ card.priority }}
                       </div>
 
                       <!-- ⋮ Dropdown Menu -->
@@ -233,10 +241,10 @@
 
                   <!-- Description -->
                   <div
-                   
-                    class="text-sm text-gray-600 dark:text-gray-300 mb-3 line-clamp-2 prose prose-sm max-w-none"
+                    class="prose prose-sm max-w-none text-gray-600 dark:text-gray-300 dark:prose-invert mb-3 line-clamp-2"
                     v-html="sanitizeHtml(card.description)"
                   ></div>
+
                   <!-- Tags -->
                   <div
                     v-if="card.tags && card.tags.length"
@@ -255,15 +263,32 @@
                   <div
                     class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mb-2"
                   >
-                    <div v-if="card.dueDate" class="flex items-center gap-1">
-                      📅
-                      <span>{{
-                        new Date(card.dueDate).toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                        })
-                      }}</span>
+                    <div class="flex items-center gap-2">
+                      <!-- Overdue Badge -->
+                      <span
+                        v-if="
+                          card.dueDate && new Date(card.dueDate) < new Date()
+                        "
+                        class="px-3 py-1 rounded-full bg-purple-100 text-purple-600 dark:bg-purple-900 dark:text-purple-200 text-xs font-bold"
+                      >
+                        Overdue
+                      </span>
+
+                      <!-- Show Date only if not overdue -->
+                      <div
+                        v-else-if="card.dueDate"
+                        class="flex items-center gap-1"
+                      >
+                        📅
+                        <span>{{
+                          new Date(card.dueDate).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                          })
+                        }}</span>
+                      </div>
                     </div>
+
                     <div
                       v-if="card.assignedUser"
                       class="flex items-center gap-2"
@@ -724,5 +749,7 @@ function formatDate(iso) {
   transition: all 0.3s ease;
 }
 
-
+.dark .prose b {
+  color: #f9fafb; /* Tailwind gray-50 */
+}
 </style>
