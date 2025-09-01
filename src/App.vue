@@ -42,6 +42,28 @@
             <MoonIcon v-if="isDark" class="h-5 w-5" />
             <SunIcon v-else class="h-5 w-5" />
           </button>
+
+          <!-- Project Actions Dropdown -->
+          <div class="relative">
+            <button
+              @click="projectDropdownOpen = !projectDropdownOpen"
+              class="px-3 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-100 shadow-sm flex items-center gap-2"
+            >
+              ⚙
+            </button>
+
+            <div
+              v-if="projectDropdownOpen"
+              class="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-30"
+            >
+              <button
+                @click="confirmDeleteAllProject"
+                class="w-full py-4 text-sm text-red-600 hover:bg-gray-50 dark:hover:bg-gray-700"
+              >
+                🗑 Delete All Tasks 
+              </button>
+            </div>
+          </div>
         </div>
       </header>
 
@@ -56,36 +78,52 @@
               'bg-green-100 dark:bg-green-900/40': column === 'done',
             }"
           >
-            <h2
-              class="font-semibold text-gray-800 dark:text-gray-100 flex items-center gap-2"
-            >
+            <div class="flex items-center gap-2">
+              <h2
+                class="font-semibold text-gray-800 dark:text-gray-100 flex items-center gap-2"
+              >
+                <span
+                  v-if="column === 'todo'"
+                  class="w-3 h-3 rounded-full bg-blue-500"
+                ></span>
+                <span
+                  v-if="column === 'inprogress'"
+                  class="w-3 h-3 rounded-full bg-yellow-500"
+                ></span>
+                <span
+                  v-if="column === 'done'"
+                  class="w-3 h-3 rounded-full bg-green-500"
+                ></span>
+                {{ columns[column].name }}
+              </h2>
               <span
-                v-if="column === 'todo'"
-                class="w-3 h-3 rounded-full bg-blue-500"
-              ></span>
-              <span
-                v-if="column === 'inprogress'"
-                class="w-3 h-3 rounded-full bg-yellow-500"
-              ></span>
-              <span
-                v-if="column === 'done'"
-                class="w-3 h-3 rounded-full bg-green-500"
-              ></span>
-              {{ columns[column].name }}
-            </h2>
-            <span
-              class="text-sm font-medium px-2 py-1 rounded-full bg-white dark:bg-gray-800 bg-opacity-70 dark:bg-opacity-70 text-gray-800 dark:text-gray-200"
-            >
-              {{ columns[column].cards.length }}
-            </span>
-             <!-- Delete All Button -->
-    <button
-      v-if="columns[column].cards.length"
-      @click="confirmDeleteAll(column)"
-      class="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-200 text-xs font-medium"
-    >
-      🗑 Delete All
-    </button>
+                class="text-sm font-medium px-2 py-1 rounded-full bg-white dark:bg-gray-800 bg-opacity-70 dark:bg-opacity-70 text-gray-800 dark:text-gray-200"
+              >
+                {{ columns[column].cards.length }}
+              </span>
+            </div>
+
+            <!-- Column Actions Dropdown -->
+            <div class="relative">
+              <button
+                @click="toggleColumnDropdown(column)"
+                class="text-gray-600 hover:text-gray-800 dark:text-gray-300 dark:hover:text-gray-100"
+              >
+                ⋮
+              </button>
+
+              <div
+                v-if="columnDropdownOpen === column"
+                class="absolute right-0 mt-2 w-40 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-20"
+              >
+                <button
+                  @click="confirmDeleteAll(column)"
+                  class="w-full  py-4 text-sm text-red-600 hover:bg-gray-50 dark:hover:bg-gray-700"
+                >
+                  🗑 Delete All in {{ columns[column].name }}
+                </button>
+              </div>
+            </div>
           </div>
 
           <div
@@ -264,21 +302,8 @@
                     class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mb-2"
                   >
                     <div class="flex items-center gap-2">
-                      <!-- Overdue Badge -->
-                      <span
-                        v-if="
-                          card.dueDate && new Date(card.dueDate) < new Date()
-                        "
-                        class="px-3 py-1 rounded-full bg-purple-100 text-purple-600 dark:bg-purple-900 dark:text-purple-200 text-xs font-bold"
-                      >
-                        Overdue
-                      </span>
-
-                      <!-- Show Date only if not overdue -->
-                      <div
-                        v-else-if="card.dueDate"
-                        class="flex items-center gap-1"
-                      >
+                      <!-- Always show the date if it exists -->
+                      <div v-if="card.dueDate" class="flex items-center gap-1">
                         📅
                         <span>{{
                           new Date(card.dueDate).toLocaleDateString("en-US", {
@@ -287,8 +312,19 @@
                           })
                         }}</span>
                       </div>
+
+                      <!-- Show overdue badge if expired -->
+                      <span
+                        v-if="
+                          card.dueDate && new Date(card.dueDate) < new Date()
+                        "
+                        class="px-3 py-1 rounded-full bg-purple-100 text-purple-600 dark:bg-purple-900 dark:text-purple-200 text-xs font-bold"
+                      >
+                        Overdue
+                      </span>
                     </div>
 
+                    <!-- Assigned User -->
                     <div
                       v-if="card.assignedUser"
                       class="flex items-center gap-2"
@@ -382,14 +418,13 @@
       </div>
 
       <!-- Toast Notification -->
-      <div v-if="toast.show" class="fixed bottom-4 right-4 z-50">
-        <div
-          class="px-6 py-3 rounded-lg shadow-lg text-white"
-          :class="toastClass"
-        >
-          {{ toast.message }}
-        </div>
-      </div>
+       
+      <ToastNotification
+        v-if="toast.show"
+        :message="toast.message"
+        :type="toast.type"
+        @close="toast.show = false"
+      />
     </div>
   </div>
 </template>
@@ -400,12 +435,44 @@ import { useDark, useToggle } from "@vueuse/core";
 import { SunIcon, MoonIcon } from "@heroicons/vue/24/solid";
 import EditTaskModal from "./components/EditTaskModal.vue";
 import AddTaskModal from "./components/AddTaskModal.vue";
+import ToastNotification from "./components/ToastNotification.vue";
 
 const isDark = useDark(); // reactive boolean
 const toggleDark = useToggle(isDark);
 const uid = () => Math.random().toString(36).slice(2, 10);
 const now = () => new Date().toISOString();
 const STORAGE_KEY = "vue-kanban-state";
+
+const projectDropdownOpen = ref(false);
+const columnDropdownOpen = ref(null);
+
+// Toggle column dropdown
+function toggleColumnDropdown(col) {
+  columnDropdownOpen.value = columnDropdownOpen.value === col ? null : col;
+}
+
+// Delete all tasks in a single column
+function confirmDeleteAll(columnKey) {
+  if (confirm(`Delete all tasks in "${columns[columnKey].name}"?`)) {
+    columns[columnKey].cards.splice(0);
+    save();
+    showToast(`All tasks deleted from ${columns[columnKey].name}`, "success");
+  }
+  columnDropdownOpen.value = null;
+}
+
+// Delete all tasks in the project
+function confirmDeleteAllProject() {
+  if (confirm("Delete ALL tasks in the entire project?")) {
+    for (const k of columnsOrder) {
+      columns[k].cards.splice(0);
+    }
+    save();
+    showToast("All project tasks deleted", "success");
+  }
+  projectDropdownOpen.value = false;
+}
+
 
 // Replace the stripHtml function with this:
 function sanitizeHtml(html) {
@@ -687,6 +754,7 @@ function confirmDelete() {
   showDeleteConfirmation.value = false;
   cardToDelete.value = null;
 }
+
 
 function startEdit(card, fromColumn) {
   editForm.id = card.id;
