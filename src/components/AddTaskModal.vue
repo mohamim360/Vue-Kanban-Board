@@ -50,8 +50,10 @@
           <label class="block text-sm font-medium mb-1">Priority<span class="text-red-500">*</span></label>
           <div class="flex gap-4 text-gray-700 dark:text-gray-300">
             <label
-              ><input type="radio" value="High" v-model="localForm.priority" />
-              High</label
+              ><input type="radio" value="H
+              igh" v-model="localForm.priority" />
+              H
+              igh</label
             >
             <label
               ><input

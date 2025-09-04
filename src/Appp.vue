@@ -274,36 +274,17 @@
             @drop="onDrop($event, column)"
           >
             <!-- Empty state -->
-            <div class="flex flex-col gap-4">
-              <div
-                v-if="
-                  columns[column].cards.length === 0 ||
-                  filteredAndSortedCards(column).length === 0
-                "
-                class="text-gray-400 dark:text-gray-500 text-sm italic py-8 text-center border-2 border-dashed rounded-lg"
-                :class="{
-                  'border-blue-100 dark:border-blue-700/40': column === 'todo',
-                  'border-yellow-100 dark:border-yellow-700/40':
-                    column === 'inprogress',
-                  'border-green-100 dark:border-green-700/40':
-                    column === 'done',
-                }"
-              >
-                Drop Tasks here
-              </div>
-              <div
-                v-if="filteredAndSortedCards(column).length === 0"
-                class="text-gray-400 dark:text-gray-500 text-sm italic py-8 text-center border-2 border-dashed rounded-lg"
-                :class="{
-                  'border-blue-100 dark:border-blue-700/40': column === 'todo',
-                  'border-yellow-100 dark:border-yellow-700/40':
-                    column === 'inprogress',
-                  'border-green-100 dark:border-green-700/40':
-                    column === 'done',
-                }"
-              >
-                No Tasks Found Here
-              </div>
+            <div
+              v-if="columns[column].cards.length === 0"
+              class="text-gray-400 dark:text-gray-500 text-sm italic py-8 text-center border-2 border-dashed rounded-lg"
+              :class="{
+                'border-blue-100 dark:border-blue-700/40': column === 'todo',
+                'border-yellow-100 dark:border-yellow-700/40':
+                  column === 'inprogress',
+                'border-green-100 dark:border-green-700/40': column === 'done',
+              }"
+            >
+              Drop cards here
             </div>
 
             <!-- Card -->
@@ -650,7 +631,7 @@
 </template>
 
 <script setup>
-import { reactive, ref, onMounted, computed, watch } from "vue";
+import { reactive, ref, onMounted, computed ,watch} from "vue";
 import { useDark, useToggle } from "@vueuse/core";
 import { SunIcon, MoonIcon, Cog6ToothIcon } from "@heroicons/vue/24/solid";
 import EditTaskModal from "./components/EditTaskModal.vue";
@@ -692,40 +673,33 @@ const allTags = computed(() => {
 // Filter and sort cards for a column
 function filteredAndSortedCards(columnKey) {
   let cards = [...columns[columnKey].cards];
-
+  
   // Apply search filter
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase();
-    cards = cards.filter(
-      (card) =>
-        card.title.toLowerCase().includes(query) ||
-        (card.description && card.description.toLowerCase().includes(query)) ||
-        (card.tags &&
-          card.tags.some((tag) => tag.toLowerCase().includes(query)))
+    cards = cards.filter(card => 
+      card.title.toLowerCase().includes(query) || 
+      (card.description && card.description.toLowerCase().includes(query)) ||
+      (card.tags && card.tags.some(tag => tag.toLowerCase().includes(query)))
     );
   }
-
+  
   // Apply user filter
   if (userFilter.value) {
-    cards = cards.filter((card) => card.assignedUser === userFilter.value);
+    cards = cards.filter(card => card.assignedUser === userFilter.value);
   }
-
+  
   // Apply tag filter
   if (tagFilter.value) {
-    cards = cards.filter(
-      (card) => card.tags && card.tags.includes(tagFilter.value)
-    );
+    cards = cards.filter(card => card.tags && card.tags.includes(tagFilter.value));
   }
-
+  
   // Apply sorting
   const priorityOrder = { High: 3, Medium: 2, Low: 1 };
-
+  
   switch (sortBy.value) {
     case "priority":
-      cards.sort(
-        (a, b) =>
-          (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0)
-      );
+      cards.sort((a, b) => (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0));
       break;
     case "dueDate":
       cards.sort((a, b) => {
@@ -742,7 +716,7 @@ function filteredAndSortedCards(columnKey) {
       cards.sort((a, b) => a.title.localeCompare(b.title));
       break;
   }
-
+  
   return cards;
 }
 
