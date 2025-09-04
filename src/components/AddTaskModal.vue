@@ -131,7 +131,7 @@ const localForm = reactive({
   title: "",
   description: "",
   tags: [],
-  priority: "medium",
+  priority: "Medium",
   dueDate: "",
   assignedUser: "",
 });
@@ -143,7 +143,7 @@ watch(
       localForm.title = "";
       localForm.description = "";
       localForm.tags = [];
-      localForm.priority = "medium";
+      localForm.priority = "Medium";
       localForm.dueDate = "";
       localForm.assignedUser = "";
     }
