@@ -16,7 +16,7 @@
 
         <!-- Title -->
         <div>
-          <label class="block text-sm font-medium mb-1">Title*</label>
+          <label class="block text-sm font-medium mb-1">Title<span class="text-red-500">*</span></label>
           <input
             v-model="localForm.title"
             class="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:text-gray-100"
@@ -44,7 +44,7 @@
 
         <!-- Priority -->
         <div>
-          <label class="block text-sm font-medium mb-1">Priority*</label>
+          <label class="block text-sm font-medium mb-1">Priority<span class="text-red-500">*</span></label>
           <div class="flex gap-4 text-gray-700 dark:text-gray-300">
             <label
               ><input type="radio" value="high" v-model="localForm.priority" />
@@ -67,7 +67,7 @@
 
         <!-- Due Date -->
         <div>
-          <label class="block text-sm font-medium mb-1">Due Date</label>
+          <label class="block text-sm font-medium mb-1">Due Date<span class="text-red-500">*</span></label>
           <input
             type="date"
             v-model="localForm.dueDate"
@@ -82,7 +82,7 @@
             v-model="localForm.assignedUser"
             class="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:text-gray-100"
           >
-            <option value="">Select user</option>
+            <option value="">Select User</option>
             <option v-for="u in users" :key="u.id" :value="u.id">
               {{ u.name }}
             </option>
@@ -155,6 +155,10 @@ function onCancel() {
 function onSave() {
   if (!localForm.title.trim()) {
     emits("error", "Task title is required");
+    return;
+  }
+  if (!localForm.dueDate) {
+    emits("error", "Due date is required");
     return;
   }
   emits("save", { ...localForm });

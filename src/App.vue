@@ -4,20 +4,57 @@
       <header
         class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4"
       >
-        <div>
-          <h1 class="text-2xl font-bold text-gray-800 dark:text-gray-100">
-            Project Kanban Board
-          </h1>
-          <p class="text-gray-500 dark:text-gray-400 text-sm">
-            Drag and drop cards between columns
-          </p>
+        <div class="flex items-center justify-between">
+          <div>
+            <h1
+              class="text-3xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-3"
+            >
+              <svg
+                class="w-8 h-8 text-indigo-600 dark:text-indigo-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                ></path>
+              </svg>
+              <input
+                type="text"
+                :value="boardTitle"
+                @input="updateBoardTitle($event.target.value)"
+                class="bg-transparent border-b-2 border-transparent border-indigo-300 hover:border-indigo-500 focus:outline-none px-2 py-1 rounded transition-colors"
+              />
+            </h1>
+            <p
+              class="text-gray-600 dark:text-gray-400 text-sm mt-2 flex items-center gap-2"
+            >
+              <svg
+                class="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"
+                ></path>
+              </svg>
+              Drag and drop cards between columns
+            </p>
+          </div>
         </div>
 
         <div class="flex items-center gap-3">
           <!-- Add Task Button -->
           <button
             @click="showAddModal = true"
-            class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-100 rounded-lg shadow-sm transition-colors flex items-center gap-2"
+            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-md transition-colors flex items-center gap-2"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -37,7 +74,7 @@
           <!-- Dark Mode Toggle -->
           <button
             @click="toggleDark()"
-            class="p-2 rounded-lg bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-100 shadow-sm transition-colors"
+            class="p-2 rounded-lg bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-100 shadow-md transition-colors"
           >
             <MoonIcon v-if="isDark" class="h-5 w-5" />
             <SunIcon v-else class="h-5 w-5" />
@@ -47,20 +84,20 @@
           <div class="relative">
             <button
               @click="projectDropdownOpen = !projectDropdownOpen"
-              class="px-3 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-100 shadow-sm flex items-center gap-2"
+              class="px-3 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-100 shadow-md flex items-center gap-2"
             >
-              ⚙
+              <Cog6ToothIcon class="h-5 w-5" />
             </button>
 
             <div
               v-if="projectDropdownOpen"
-              class="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-30"
+              class="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-40"
             >
               <button
                 @click="confirmDeleteAllProject"
                 class="w-full py-4 text-sm text-red-600 hover:bg-gray-50 dark:hover:bg-gray-700"
               >
-                🗑 Delete All Tasks 
+                🗑 Delete All Tasks
               </button>
             </div>
           </div>
@@ -71,11 +108,11 @@
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div v-for="column in columnsOrder" :key="column" class="flex flex-col">
           <div
-            class="flex items-center justify-between mb-4 p-3 rounded-t-lg transition-colors"
+            class="flex items-center justify-between mb-4 p-3 rounded-t-lg transition-colors sticky top-0 z-20"
             :class="{
-              'bg-blue-100 dark:bg-blue-900/40': column === 'todo',
-              'bg-yellow-100 dark:bg-yellow-900/40': column === 'inprogress',
-              'bg-green-100 dark:bg-green-900/40': column === 'done',
+              'bg-blue-100 dark:bg-blue-900': column === 'todo',
+              'bg-yellow-100 dark:bg-yellow-900': column === 'inprogress',
+              'bg-green-100 dark:bg-green-900': column === 'done',
             }"
           >
             <div class="flex items-center gap-2">
@@ -109,7 +146,16 @@
                 @click="toggleColumnDropdown(column)"
                 class="text-gray-600 hover:text-gray-800 dark:text-gray-300 dark:hover:text-gray-100"
               >
-                ⋮
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-5 w-5"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    d="M10 6a2 2 0 110-4 2 2 0 010 4zm0 6a2 2 0 110-4 2 2 0 010 4zm0 6a2 2 0 110-4 2 2 0 010 4z"
+                  />
+                </svg>
               </button>
 
               <div
@@ -118,9 +164,9 @@
               >
                 <button
                   @click="confirmDeleteAll(column)"
-                  class="w-full  py-4 text-sm text-red-600 hover:bg-gray-50 dark:hover:bg-gray-700"
+                  class="w-full py-4 text-sm text-red-600 hover:bg-gray-50 dark:hover:bg-gray-700"
                 >
-                  🗑 Delete All in {{ columns[column].name }}
+                  🗑 Delete All
                 </button>
               </div>
             </div>
@@ -172,10 +218,10 @@
               <div
                 class="absolute top-0 left-0 h-1.5 w-full rounded-t-xl"
                 :class="{
-                  'bg-red-700 dark:bg-red-900': card.priority === 'high',
+                  'bg-red-700 dark:bg-red-900': card.priority === 'High',
                   'bg-orange-600 dark:bg-orange-800':
-                    card.priority === 'medium',
-                  'bg-slate-500': card.priority === 'low',
+                    card.priority === 'Medium',
+                  'bg-slate-500': card.priority === 'Low',
                 }"
               ></div>
 
@@ -195,11 +241,11 @@
                         class="flex-shrink-0 px-2 py-1 text-xs font-medium rounded-full"
                         :class="{
                           'bg-red-200 text-red-800 dark:bg-red-900 dark:text-red-200':
-                            card.priority === 'high',
+                            card.priority === 'High',
                           'bg-orange-200 text-orange-800 dark:bg-orange-900 dark:text-orange-200':
-                            card.priority === 'medium',
+                            card.priority === 'Medium',
                           'bg-slate-300 text-slate-800 dark:bg-slate-700 dark:text-slate-300':
-                            card.priority === 'low',
+                            card.priority === 'Low',
                         }"
                       >
                         {{ card.priority }}
@@ -257,13 +303,19 @@
                             </button>
                           </div>
 
-                          <!-- Edit/Delete -->
+                          <!-- Edit/Clone/Delete -->
                           <div class="p-2">
                             <button
                               @click="startEdit(card, column)"
                               class="w-full text-left px-4 py-2 text-sm flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-700"
                             >
                               ✏ Edit
+                            </button>
+                            <button
+                              @click="cloneTask(card)"
+                              class="w-full text-left px-4 py-2 text-sm flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-700"
+                            >
+                              ⎘ Clone
                             </button>
                             <button
                               @click="showDeleteModal(card.id)"
@@ -329,12 +381,24 @@
                       v-if="card.assignedUser"
                       class="flex items-center gap-2"
                     >
-                      <span
-                        class="w-6 h-6 flex items-center justify-center rounded-full bg-indigo-500 text-white text-xs"
-                      >
-                        {{ getUserInitials(card.assignedUser) }}
-                      </span>
-                      <span>{{ getUserName(card.assignedUser) }}</span>
+                      <!-- User badge with tooltip -->
+                      <div class="relative group">
+                        <span
+                          class="w-6 h-6 flex items-center justify-center rounded-full bg-indigo-500 text-white text-xs cursor-pointer"
+                        >
+                          {{ getUserInitials(card.assignedUser) }}
+                        </span>
+
+                        <!-- Tooltip -->
+                        <div
+                          class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs bg-gray-800 dark:bg-gray-100 text-white dark:text-gray-800 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10"
+                        >
+                          {{ getUserName(card.assignedUser) }}
+                          <div
+                            class="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-800 dark:border-t-gray-100"
+                          ></div>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
@@ -417,8 +481,55 @@
         </div>
       </div>
 
+      <!-- Delete All Modal -->
+      <div
+        v-if="showDeleteAllModal"
+        class="fixed inset-0 flex items-center justify-center z-50 p-4"
+      >
+        <div
+          class="absolute inset-0 bg-black bg-opacity-40"
+          @click="showDeleteAllModal = false"
+        ></div>
+        <div
+          class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md z-50 overflow-hidden"
+        >
+          <div class="p-6">
+            <h3
+              class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4"
+            >
+              Delete All Tasks
+            </h3>
+            <p class="text-gray-600 dark:text-gray-300">
+              Are you sure you want to delete
+              <span v-if="deleteAllTarget === 'project'"
+                >all tasks in the project</span
+              >
+              <span v-else
+                >all tasks in "{{ columns[deleteAllTarget].name }}"</span
+              >? This action cannot be undone.
+            </p>
+          </div>
+          <div
+            class="bg-gray-50 dark:bg-gray-700 px-6 py-4 flex justify-end gap-3"
+          >
+            <button
+              @click="showDeleteAllModal = false"
+              class="px-4 py-2 text-gray-700 dark:text-gray-200"
+            >
+              Cancel
+            </button>
+            <button
+              @click="confirmDeleteAllAction"
+              class="px-4 py-2 bg-red-600 text-white rounded-lg"
+            >
+              Delete All
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- Toast Notification -->
-       
+
       <ToastNotification
         v-if="toast.show"
         :message="toast.message"
@@ -432,7 +543,7 @@
 <script setup>
 import { reactive, ref, onMounted, computed } from "vue";
 import { useDark, useToggle } from "@vueuse/core";
-import { SunIcon, MoonIcon } from "@heroicons/vue/24/solid";
+import { SunIcon, MoonIcon, Cog6ToothIcon } from "@heroicons/vue/24/solid";
 import EditTaskModal from "./components/EditTaskModal.vue";
 import AddTaskModal from "./components/AddTaskModal.vue";
 import ToastNotification from "./components/ToastNotification.vue";
@@ -445,34 +556,40 @@ const STORAGE_KEY = "vue-kanban-state";
 
 const projectDropdownOpen = ref(false);
 const columnDropdownOpen = ref(null);
-
+const showDeleteAllModal = ref(false);
+const deleteAllTarget = ref(null);
 // Toggle column dropdown
 function toggleColumnDropdown(col) {
   columnDropdownOpen.value = columnDropdownOpen.value === col ? null : col;
 }
 
-// Delete all tasks in a single column
 function confirmDeleteAll(columnKey) {
-  if (confirm(`Delete all tasks in "${columns[columnKey].name}"?`)) {
-    columns[columnKey].cards.splice(0);
-    save();
-    showToast(`All tasks deleted from ${columns[columnKey].name}`, "success");
-  }
-  columnDropdownOpen.value = null;
+  deleteAllTarget.value = columnKey;
+  showDeleteAllModal.value = true;
 }
 
-// Delete all tasks in the project
 function confirmDeleteAllProject() {
-  if (confirm("Delete ALL tasks in the entire project?")) {
+  deleteAllTarget.value = "project";
+  showDeleteAllModal.value = true;
+}
+
+function confirmDeleteAllAction() {
+  if (deleteAllTarget.value === "project") {
     for (const k of columnsOrder) {
       columns[k].cards.splice(0);
     }
-    save();
     showToast("All project tasks deleted", "success");
+  } else {
+    columns[deleteAllTarget.value].cards.splice(0);
+    showToast(
+      `All tasks deleted from ${columns[deleteAllTarget.value].name}`,
+      "success"
+    );
   }
-  projectDropdownOpen.value = false;
+  save();
+  showDeleteAllModal.value = false;
+  deleteAllTarget.value = null;
 }
-
 
 // Replace the stripHtml function with this:
 function sanitizeHtml(html) {
@@ -576,7 +693,7 @@ const editForm = reactive({
   title: "",
   description: "",
   tags: [],
-  priority: "medium",
+  priority: "Medium",
   dueDate: "",
   assignedUser: "",
 });
@@ -601,31 +718,45 @@ function addNewTask(task) {
 }
 
 function sortedCards(columnKey) {
-  const priorityOrder = { high: 3, medium: 2, low: 1 };
+  const priorityOrder = { High: 3, Medium: 2, Low: 1 };
   return [...columns[columnKey].cards].sort((a, b) => {
     return (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0);
   });
 }
+
+// Add a reactive variable for the board title
+const boardTitle = ref("Project Kanban Board");
 
 function load() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
+
+      // Load title if it exists
+      if (parsed.title) {
+        boardTitle.value = parsed.title;
+      }
+
+      // Clear existing cards
       columnsOrder.forEach((k) => columns[k].cards.splice(0));
+
+      // Load columns data
+      const columnsData = parsed.columns || parsed; // Support both old and new format
+
       for (const k of columnsOrder) {
-        if (parsed[k] && Array.isArray(parsed[k])) {
-          columns[k].cards.push(...parsed[k]);
+        if (columnsData[k] && Array.isArray(columnsData[k])) {
+          columns[k].cards.push(...columnsData[k]);
         }
       }
     } else {
-      // Default sample cards
+      // Default sample cards (your existing code)
       columns.todo.cards.push(
         {
           id: uid(),
           title: "Design landing page",
           description: "Create wireframes for homepage hero section",
-          priority: "high",
+          priority: "High",
           tags: ["design", "frontend"],
           createdAt: now(),
         },
@@ -633,7 +764,7 @@ function load() {
           id: uid(),
           title: "User authentication",
           description: "Set up login and registration flows",
-          priority: "medium",
+          priority: "Medium",
           tags: ["backend", "security"],
           createdAt: now(),
         }
@@ -642,7 +773,7 @@ function load() {
         id: uid(),
         title: "API endpoints",
         description: "Implement CRUD operations for main resources",
-        priority: "medium",
+        priority: "Medium",
         tags: ["backend", "api"],
         createdAt: now(),
       });
@@ -650,7 +781,7 @@ function load() {
         id: uid(),
         title: "Project setup",
         description: "Initialize repository and CI pipeline",
-        priority: "low",
+        priority: "Low",
         tags: ["devops"],
         createdAt: now(),
       });
@@ -664,13 +795,27 @@ function load() {
 
 function save() {
   try {
-    const payload = {};
-    for (const k of columnsOrder) payload[k] = columns[k].cards;
+    const payload = {
+      title: boardTitle.value, // Save the title
+      columns: {}, // Save columns in a nested object
+    };
+
+    // Add columns data
+    for (const k of columnsOrder) {
+      payload.columns[k] = columns[k].cards;
+    }
+
     localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
   } catch (e) {
     console.error("Failed to save state", e);
     showToast("Failed to save data", "error");
   }
+}
+
+// Function to update and save title
+function updateBoardTitle(newTitle) {
+  boardTitle.value = newTitle;
+  save(); // Save immediately when title changes
 }
 
 onMounted(load);
@@ -755,7 +900,6 @@ function confirmDelete() {
   cardToDelete.value = null;
 }
 
-
 function startEdit(card, fromColumn) {
   editForm.id = card.id;
   editForm.title = card.title;
@@ -787,6 +931,62 @@ function saveEdit(updated) {
   save();
   showToast("Task updated successfully");
 }
+
+// Clone task function
+function cloneTask(card) {
+  const currentColumn = findCardColumn(card.id);
+
+  if (!currentColumn) return;
+
+  // Find how many existing copies of this card already exist
+  const existingCopies = columns[currentColumn].cards.filter((c) => {
+    const baseTitle = card.title.replace(/\s*\(Copy.*\)$/, "");
+    return c.title.startsWith(baseTitle);
+  });
+
+  // Determine next copy number
+  let copyNumber = 1;
+  const existingNumbers = existingCopies
+    .map((c) => {
+      const match = c.title.match(/\(Copy (\d+)\)$/);
+      return match ? parseInt(match[1], 10) : null;
+    })
+    .filter((n) => n !== null);
+
+  if (existingNumbers.length > 0) {
+    copyNumber = Math.max(...existingNumbers) + 1;
+  }
+
+  // Generate the new title
+  const baseTitle = card.title.replace(/\s*\(Copy.*\)$/, "");
+  const newTitle = `${baseTitle} (Copy ${copyNumber})`;
+
+  // Create a deep copy
+  const clonedCard = {
+    ...card,
+    id: uid(),
+    title: newTitle,
+    createdAt: now(),
+  };
+
+  // Add the cloned card
+  columns[currentColumn].cards.unshift(clonedCard);
+  save();
+  showToast("Task cloned successfully");
+
+  dropdownOpen.value = null;
+}
+
+// Helper function to find which column a card is in
+function findCardColumn(cardId) {
+  for (const column of columnsOrder) {
+    if (columns[column].cards.some((card) => card.id === cardId)) {
+      return column;
+    }
+  }
+  return null;
+}
+
 function formatDate(iso) {
   try {
     const date = new Date(iso);
