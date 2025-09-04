@@ -47,19 +47,19 @@
           <label class="block text-sm font-medium mb-1">Priority<span class="text-red-500">*</span></label>
           <div class="flex gap-4 text-gray-700 dark:text-gray-300">
             <label
-              ><input type="radio" value="high" v-model="localForm.priority" />
+              ><input type="radio" value="High" v-model="localForm.priority" />
               High</label
             >
             <label
               ><input
                 type="radio"
-                value="medium"
+                value="Medium"
                 v-model="localForm.priority"
               />
               Medium</label
             >
             <label
-              ><input type="radio" value="low" v-model="localForm.priority" />
+              ><input type="radio" value="Low" v-model="localForm.priority" />
               Low</label
             >
           </div>

@@ -26,7 +26,7 @@
                 type="text"
                 :value="boardTitle"
                 @input="updateBoardTitle($event.target.value)"
-                class="bg-transparent border-b-2 border-transparent border-indigo-300 hover:border-indigo-500 focus:outline-none px-2 py-1 rounded transition-colors"
+                class="bg-transparent border-b-2 border-indigo-300 hover:border-indigo-600 focus:outline-none px-2 py-1 rounded transition-colors"
               />
             </h1>
             <p
