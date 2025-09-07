@@ -9,7 +9,7 @@
     ></div>
 
     <div
-      class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md z-50 overflow-hidden"
+      class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl z-50 overflow-hidden"
     >
       <div class="p-6 space-y-4">
         <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">
@@ -29,12 +29,10 @@
         <!-- Description (Editor) -->
         <div>
           <label class="block text-sm font-medium mb-1">Description</label>
-          <div class="border rounded-lg overflow-hidden">
-            <QuillEditor
-              v-model:content="localForm.description"
-              contentType="html"
-              theme="snow"
-              class="w-full"
+          <div class="border rounded-lg overflow-hidden bg-white dark:bg-gray-700">
+            <TiptapEditor
+              v-model="localForm.description"
+              class="w-full min-h-[150px]"
             />
           </div>
         </div>
@@ -114,9 +112,8 @@
 
 <script setup>
 import { reactive, watch } from "vue";
-import { QuillEditor } from "@vueup/vue-quill";
+import TiptapEditor from "./TiptapEditor.vue";
 import TagInput from "./TagInput.vue";
-import "@vueup/vue-quill/dist/vue-quill.snow.css";
 
 const props = defineProps({ visible: Boolean });
 const emits = defineEmits(["update:visible", "add", "error"]);

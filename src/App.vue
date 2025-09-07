@@ -2,59 +2,41 @@
   <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
     <div class="mx-auto text-gray-800 dark:text-gray-100">
       <header
-        class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4"
+        class="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4 sm:gap-6"
       >
-        <div class="flex items-center justify-between">
-          <div>
-            <h1
-              class="text-3xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-3"
-            >
-              <svg
-                class="w-8 h-8 text-indigo-600 dark:text-indigo-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-                ></path>
-              </svg>
-              <input
-                type="text"
-                :value="boardTitle"
-                @input="updateBoardTitle($event.target.value)"
-                class="bg-transparent border-b-2 border-indigo-300 hover:border-indigo-600 focus:outline-none px-2 py-1 rounded transition-colors"
-              />
-            </h1>
-            <p
-              class="text-gray-600 dark:text-gray-400 text-sm mt-2 flex items-center gap-2"
-            >
-              <svg
-                class="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"
-                ></path>
-              </svg>
-              Drag and drop cards between columns
-            </p>
-          </div>
-        </div>
+        <!-- Title + Editable Input -->
+        <h1
+          class="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2 sm:gap-3 w-full sm:w-auto"
+        >
+          <svg
+            class="w-7 h-7 sm:w-8 sm:h-8 text-indigo-600 dark:text-indigo-400 flex-shrink-0"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+            ></path>
+          </svg>
+          <input
+            type="text"
+            :value="boardTitle"
+            @input="updateBoardTitle($event.target.value)"
+            class="w-full sm:w-auto bg-transparent border-b-2 border-indigo-300 hover:border-indigo-600 focus:outline-none px-2 py-1 rounded transition-colors"
+          />
+        </h1>
 
-        <div class="flex items-center gap-3">
+        <!-- Controls -->
+        <div
+          class="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto justify-start sm:justify-end"
+        >
           <!-- Add Task Button -->
           <button
             @click="showAddModal = true"
-            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-md transition-colors flex items-center gap-2"
+            class="flex items-center gap-2 px-3 sm:px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-md transition-colors text-sm sm:text-base w-full sm:w-auto justify-center"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -81,7 +63,7 @@
           </button>
 
           <!-- Project Actions Dropdown -->
-          <div class="relative">
+          <div class="relative" ref="projectDropdownRef">
             <button
               @click="projectDropdownOpen = !projectDropdownOpen"
               class="px-3 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-100 shadow-md flex items-center gap-2"
@@ -95,7 +77,7 @@
             >
               <button
                 @click="confirmDeleteAllProject"
-                class="w-full py-4 text-sm text-red-600 hover:bg-gray-50 dark:hover:bg-gray-700"
+                class="w-full py-3 text-sm text-red-600 hover:bg-gray-50 dark:hover:bg-gray-700"
               >
                 🗑 Delete All Tasks
               </button>
@@ -231,7 +213,7 @@
             </div>
 
             <!-- Column Actions Dropdown -->
-            <div class="relative">
+            <div class="relative" ref="columnDropdownRef">
               <button
                 @click="toggleColumnDropdown(column)"
                 class="text-gray-600 hover:text-gray-800 dark:text-gray-300 dark:hover:text-gray-100"
@@ -308,6 +290,7 @@
 
             <!-- Card -->
             <div
+              @click="startEdit(card, column)"
               v-for="card in filteredAndSortedCards(column)"
               :key="card.id"
               class="group bg-white dark:bg-gray-800 rounded-xl p-4 mb-4 cursor-grab border hover:border-gray-300 dark:hover:border-gray-500 transition-all shadow-sm hover:shadow-md relative"
@@ -397,7 +380,7 @@
                                 (c) => c !== column
                               )"
                               :key="colKey"
-                              @click="moveCard(card.id, colKey)"
+                              @click.stop="moveCard(card.id, colKey)"
                               class="w-full text-left px-4 py-2 text-sm flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-700"
                             >
                               <span
@@ -421,13 +404,13 @@
                               ✏ Edit
                             </button>
                             <button
-                              @click="cloneTask(card)"
+                              @click.stop="cloneTask(card)"
                               class="w-full text-left px-4 py-2 text-sm flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-700"
                             >
                               ⎘ Clone
                             </button>
                             <button
-                              @click="showDeleteModal(card.id)"
+                              @click.stop="showDeleteModal(card.id)"
                               class="w-full text-left px-4 py-2 text-red-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-sm flex items-center gap-2"
                             >
                               🗑 Delete
@@ -438,11 +421,11 @@
                     </div>
                   </div>
 
-                  <!-- Description -->
+                  <!-- Description
                   <div
                     class="prose prose-sm max-w-none text-gray-600 dark:text-gray-300 dark:prose-invert mb-3 line-clamp-2"
                     v-html="sanitizeHtml(card.description)"
-                  ></div>
+                  ></div> -->
 
                   <!-- Tags -->
                   <div
@@ -545,7 +528,9 @@
       <EditTaskModal
         v-model:visible="editing"
         :task="editForm"
+        :is-cloning="isCloning"
         @save="saveEdit"
+        @clone="confirmClone"
         @error="showToast($event, 'error')"
       />
       <!-- Delete Modal -->
@@ -650,7 +635,7 @@
 </template>
 
 <script setup>
-import { reactive, ref, onMounted, computed, watch } from "vue";
+import { reactive, ref, onMounted, computed, onBeforeUnmount } from "vue";
 import { useDark, useToggle } from "@vueuse/core";
 import { SunIcon, MoonIcon, Cog6ToothIcon } from "@heroicons/vue/24/solid";
 import EditTaskModal from "./components/EditTaskModal.vue";
@@ -667,6 +652,22 @@ const projectDropdownOpen = ref(false);
 const columnDropdownOpen = ref(null);
 const showDeleteAllModal = ref(false);
 const deleteAllTarget = ref(null);
+
+const handleClickOutside = (event) => {
+  if (!event.target.closest(".relative")) {
+    projectDropdownOpen.value = false;
+    columnDropdownOpen.value = null;
+    dropdownOpen.value = null;
+  }
+};
+
+onMounted(() => {
+  document.addEventListener("click", handleClickOutside);
+});
+
+onBeforeUnmount(() => {
+  document.removeEventListener("click", handleClickOutside);
+});
 
 // Search and filter state
 const searchQuery = ref("");
@@ -754,11 +755,13 @@ function toggleColumnDropdown(col) {
 function confirmDeleteAll(columnKey) {
   deleteAllTarget.value = columnKey;
   showDeleteAllModal.value = true;
+  columnDropdownOpen.value = null;
 }
 
 function confirmDeleteAllProject() {
   deleteAllTarget.value = "project";
   showDeleteAllModal.value = true;
+  projectDropdownOpen.value = false;
 }
 
 function confirmDeleteAllAction() {
@@ -780,44 +783,44 @@ function confirmDeleteAllAction() {
 }
 
 // Replace the stripHtml function with this:
-function sanitizeHtml(html) {
-  if (!html) return "";
+// function sanitizeHtml(html) {
+//   if (!html) return "";
 
-  // Create a temporary div element
-  const tmp = document.createElement("div");
-  tmp.innerHTML = html;
+//   // Create a temporary div element
+//   const tmp = document.createElement("div");
+//   tmp.innerHTML = html;
 
-  // Remove script tags and other dangerous elements
-  const scripts = tmp.getElementsByTagName("script");
-  for (let i = scripts.length - 1; i >= 0; i--) {
-    scripts[i].remove();
-  }
+//   // Remove script tags and other dangerous elements
+//   const scripts = tmp.getElementsByTagName("script");
+//   for (let i = scripts.length - 1; i >= 0; i--) {
+//     scripts[i].remove();
+//   }
 
-  // Allow only certain tags
-  const allowedTags = [
-    "b",
-    "i",
-    "u",
-    "strong",
-    "em",
-    "p",
-    "br",
-    "ul",
-    "ol",
-    "li",
-  ];
-  const allElements = tmp.getElementsByTagName("*");
+//   // Allow only certain tags
+//   const allowedTags = [
+//     "b",
+//     "i",
+//     "u",
+//     "strong",
+//     "em",
+//     "p",
+//     "br",
+//     "ul",
+//     "ol",
+//     "li",
+//   ];
+//   const allElements = tmp.getElementsByTagName("*");
 
-  for (let i = allElements.length - 1; i >= 0; i--) {
-    const el = allElements[i];
-    if (!allowedTags.includes(el.tagName.toLowerCase())) {
-      // Replace disallowed tags with their content
-      el.replaceWith(...el.childNodes);
-    }
-  }
+//   for (let i = allElements.length - 1; i >= 0; i--) {
+//     const el = allElements[i];
+//     if (!allowedTags.includes(el.tagName.toLowerCase())) {
+//       // Replace disallowed tags with their content
+//       el.replaceWith(...el.childNodes);
+//     }
+//   }
 
-  return tmp.innerHTML;
-}
+//   return tmp.innerHTML;
+// }
 
 const demoUsers = [
   { id: "u1", name: "Alice Johnson" },
@@ -857,14 +860,6 @@ const toast = reactive({
   type: "success", // can be 'success', 'error', 'info'
 });
 
-const toastClass = computed(() => {
-  return {
-    "bg-green-500": toast.type === "success",
-    "bg-red-500": toast.type === "error",
-    "bg-blue-500": toast.type === "info",
-  };
-});
-
 function showToast(message, type = "success") {
   toast.message = message;
   toast.type = type;
@@ -876,6 +871,7 @@ function showToast(message, type = "success") {
 
 // Edit form
 const editing = ref(false);
+const isCloning = ref(false);
 const editForm = reactive({
   id: "",
   title: "",
@@ -1100,39 +1096,17 @@ function startEdit(card, fromColumn) {
   dropdownOpen.value = null;
 }
 
-function saveEdit(updated) {
-  if (!updated.id) return;
-
-  for (const k of columnsOrder) {
-    const i = columns[k].cards.findIndex((c) => c.id === updated.id);
-    if (i > -1) {
-      // Make sure to preserve the original createdAt date
-      columns[k].cards[i] = {
-        ...columns[k].cards[i],
-        ...updated,
-        createdAt: columns[k].cards[i].createdAt, // Keep original creation date
-      };
-      break;
-    }
-  }
-
-  save();
-  showToast("Task updated successfully");
-}
-
 // Clone task function
 function cloneTask(card) {
   const currentColumn = findCardColumn(card.id);
-
   if (!currentColumn) return;
 
-  // Find how many existing copies of this card already exist
+  // Generate a suggested title for the clone
   const existingCopies = columns[currentColumn].cards.filter((c) => {
     const baseTitle = card.title.replace(/\s*\(Copy.*\)$/, "");
     return c.title.startsWith(baseTitle);
   });
 
-  // Determine next copy number
   let copyNumber = 1;
   const existingNumbers = existingCopies
     .map((c) => {
@@ -1145,24 +1119,71 @@ function cloneTask(card) {
     copyNumber = Math.max(...existingNumbers) + 1;
   }
 
-  // Generate the new title
   const baseTitle = card.title.replace(/\s*\(Copy.*\)$/, "");
-  const newTitle = `${baseTitle} (Copy ${copyNumber})`;
+  const suggestedTitle = `${baseTitle} (Copy ${copyNumber})`;
 
-  // Create a deep copy
+  // Populate the edit form with the card data and suggested title
+  editForm.id = card.id; // Keep original ID for reference
+  editForm.title = suggestedTitle;
+  editForm.description = card.description || "";
+  editForm.tags = [...(card.tags || [])];
+  editForm.priority = card.priority;
+  editForm.dueDate = card.dueDate || "";
+  editForm.assignedUser = card.assignedUser || "";
+
+  // Set cloning mode and open the modal
+  isCloning.value = true;
+  editing.value = true;
+  dropdownOpen.value = null;
+}
+
+// New function to handle the actual cloning after editing
+function confirmClone(clonedData) {
+  const currentColumn = findCardColumn(editForm.id);
+  if (!currentColumn) return;
+
+  // Create the cloned card with the edited data
   const clonedCard = {
-    ...card,
-    id: uid(),
-    title: newTitle,
+    ...clonedData,
+    id: uid(), // New ID for the clone
     createdAt: now(),
   };
 
-  // Add the cloned card
+  // Add the cloned card to the same column as the original
   columns[currentColumn].cards.unshift(clonedCard);
   save();
   showToast("Task cloned successfully");
 
-  dropdownOpen.value = null;
+  // Reset the cloning state
+  isCloning.value = false;
+}
+
+// Modify the saveEdit function to handle both editing and cloning
+function saveEdit(updated) {
+  if (!updated.id) return;
+
+  if (isCloning.value) {
+    // If we're in cloning mode, call confirmClone instead
+    confirmClone(updated);
+    return;
+  }
+
+  // Regular edit functionality
+  for (const k of columnsOrder) {
+    const i = columns[k].cards.findIndex((c) => c.id === updated.id);
+    if (i > -1) {
+      columns[k].cards[i] = {
+        ...columns[k].cards[i],
+        ...updated,
+        createdAt: columns[k].cards[i].createdAt, // Keep original creation date
+      };
+      break;
+    }
+  }
+
+  save();
+  showToast("Task updated successfully");
+  isCloning.value = false; // Ensure cloning flag is reset
 }
 
 // Helper function to find which column a card is in

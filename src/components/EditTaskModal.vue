@@ -9,10 +9,10 @@
     ></div>
 
     <div
-      class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md z-50 overflow-hidden"
+      class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl z-50 overflow-hidden"
     >
       <div class="p-6 space-y-4">
-        <h3 class="text-lg font-semibold">Edit Task</h3>
+        <h3 class="text-lg font-semibold">{{ isCloning ? 'Clone Task' : 'Edit Task' }}</h3>
 
         <!-- Title -->
         <div>
@@ -26,12 +26,10 @@
         <!-- Description -->
         <div>
           <label class="block text-sm font-medium mb-1">Description</label>
-          <div class="border rounded-lg overflow-hidden">
-            <QuillEditor
-              v-model:content="localForm.description"
-              contentType="html"
-              theme="snow"
-              class="w-full"
+          <div class="border rounded-lg overflow-hidden bg-white dark:bg-gray-700">
+            <TiptapEditor
+              v-model="localForm.description"
+              class="w-full min-h-[150px]"
             />
           </div>
         </div>
@@ -94,6 +92,14 @@
       <div class="bg-gray-50 dark:bg-gray-700 px-6 py-4 flex justify-end gap-3">
         <button @click="onCancel" class="px-4 py-2">Cancel</button>
         <button
+          v-if="isCloning"
+          @click="onClone"
+          class="px-4 py-2 bg-green-600 text-white rounded-lg"
+        >
+          Create Clone
+        </button>
+        <button
+          v-else
           @click="onSave"
           class="px-4 py-2 bg-indigo-600 text-white rounded-lg"
         >
@@ -105,14 +111,17 @@
 </template>
 
 <script setup>
-import { reactive, watch, nextTick } from "vue";
-import { QuillEditor } from "@vueup/vue-quill";
-import "@vueup/vue-quill/dist/vue-quill.snow.css";
-
+import { reactive, watch, nextTick, defineProps, defineEmits } from "vue";
+import TiptapEditor from "./TiptapEditor.vue";
 import TagInput from "./TagInput.vue";
 
-const props = defineProps({ visible: Boolean, task: Object });
-const emits = defineEmits(["update:visible", "save", "error"]);
+const props = defineProps({ 
+  visible: Boolean, 
+  task: Object,
+  isCloning: Boolean // Add isCloning prop
+});
+
+const emits = defineEmits(["update:visible", "save", "clone", "error"]);
 
 const users = [
   { id: "u1", name: "Alice Johnson" },
@@ -125,7 +134,7 @@ const localForm = reactive({
   title: "",
   description: "",
   tags: [],
-  priority: "medium",
+  priority: "Medium",
   dueDate: "",
   assignedUser: "",
 });
@@ -138,7 +147,7 @@ watch(
       localForm.title = newTask.title;
       localForm.description = newTask.description || "";
       localForm.tags = [...(newTask.tags || [])];
-      localForm.priority = newTask.priority || "medium";
+      localForm.priority = newTask.priority || "Medium";
       localForm.dueDate = newTask.dueDate || "";
       localForm.assignedUser = newTask.assignedUser || "";
 
@@ -148,6 +157,7 @@ watch(
   },
   { immediate: true, deep: true }
 );
+
 function onCancel() {
   emits("update:visible", false);
 }
@@ -162,6 +172,19 @@ function onSave() {
     return;
   }
   emits("save", { ...localForm });
+  emits("update:visible", false);
+}
+
+function onClone() {
+  if (!localForm.title.trim()) {
+    emits("error", "Task title is required");
+    return;
+  }
+  if (!localForm.dueDate) {
+    emits("error", "Due date is required");
+    return;
+  }
+  emits("clone", { ...localForm });
   emits("update:visible", false);
 }
 </script>
