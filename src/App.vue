@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
+  <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-6" id="app">
     <div class="mx-auto text-gray-800 dark:text-gray-100">
       <header
         class="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4 sm:gap-6"
@@ -1228,5 +1228,23 @@ function formatDate(iso) {
 
 .dark .prose b {
   color: #f9fafb; /* Tailwind gray-50 */
+}
+
+#app {
+  /* Ensure no unintended scaling */
+  transform: scale(1);
+  transform-origin: top left;
+  width: 100%;
+}
+
+/* Global reset for any rogue styles */
+* {
+  max-width: 100%;
+}
+
+/* Ensure images don't break layout */
+img {
+  height: auto;
+  max-width: 100%;
 }
 </style>
