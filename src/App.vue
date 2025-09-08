@@ -1,15 +1,14 @@
 <template>
-  <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-6" id="app">
+  <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
     <div class="mx-auto text-gray-800 dark:text-gray-100">
       <header
-        class="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4 sm:gap-6"
+        class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4"
       >
-        <!-- Title + Editable Input -->
         <h1
-          class="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2 sm:gap-3 w-full sm:w-auto"
+          class="text-3xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-3"
         >
           <svg
-            class="w-7 h-7 sm:w-8 sm:h-8 text-indigo-600 dark:text-indigo-400 flex-shrink-0"
+            class="w-8 h-8 text-indigo-600 dark:text-indigo-400"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -25,18 +24,15 @@
             type="text"
             :value="boardTitle"
             @input="updateBoardTitle($event.target.value)"
-            class="w-full sm:w-auto bg-transparent border-b-2 border-indigo-300 hover:border-indigo-600 focus:outline-none px-2 py-1 rounded transition-colors"
+            class="bg-transparent border-b-2 border-indigo-300 hover:border-indigo-600 focus:outline-none px-2 py-1 rounded transition-colors"
           />
         </h1>
 
-        <!-- Controls -->
-        <div
-          class="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto justify-start sm:justify-end"
-        >
+        <div class="flex items-center gap-3">
           <!-- Add Task Button -->
           <button
             @click="showAddModal = true"
-            class="flex items-center gap-2 px-3 sm:px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-md transition-colors text-sm sm:text-base w-full sm:w-auto justify-center"
+            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-md transition-colors flex items-center gap-2"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -64,22 +60,24 @@
 
           <!-- Project Actions Dropdown -->
           <div class="relative" ref="projectDropdownRef">
+            <!-- Settings Button -->
             <button
               @click="projectDropdownOpen = !projectDropdownOpen"
-              class="px-3 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-100 shadow-md flex items-center gap-2"
+              class="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-100 shadow-sm border border-gray-200 dark:border-gray-600 transition duration-200 ease-in-out"
             >
               <Cog6ToothIcon class="h-5 w-5" />
             </button>
 
+            <!-- Project Dropdown -->
             <div
               v-if="projectDropdownOpen"
-              class="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-40"
+              class="absolute right-0 mt-2 w-52 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl z-40 overflow-hidden"
             >
               <button
                 @click="confirmDeleteAllProject"
-                class="w-full py-3 text-sm text-red-600 hover:bg-gray-50 dark:hover:bg-gray-700"
+                class="w-full px-1 py-3 text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-600/30 transition-colors duration-200"
               >
-                🗑 Delete All Tasks
+                <span>🗑</span> Delete All Tasks
               </button>
             </div>
           </div>
@@ -235,11 +233,11 @@
                 class="absolute right-0 mt-2 w-40 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-20"
               >
                 <button
-                  @click="confirmDeleteAll(column)"
-                  class="w-full py-4 text-sm text-red-600 hover:bg-gray-50 dark:hover:bg-gray-700"
-                >
-                  🗑 Delete All
-                </button>
+                @click="confirmDeleteAll(column)"
+                class="w-full px-1 py-3 text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-600/30 transition-colors duration-200"
+              >
+                <span>🗑</span> Delete All
+              </button>
               </div>
             </div>
           </div>
@@ -380,7 +378,7 @@
                                 (c) => c !== column
                               )"
                               :key="colKey"
-                              @click.stop="moveCard(card.id, colKey)"
+                              @click="moveCard(card.id, colKey)"
                               class="w-full text-left px-4 py-2 text-sm flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-700"
                             >
                               <span
@@ -652,7 +650,6 @@ const projectDropdownOpen = ref(false);
 const columnDropdownOpen = ref(null);
 const showDeleteAllModal = ref(false);
 const deleteAllTarget = ref(null);
-
 const handleClickOutside = (event) => {
   if (!event.target.closest(".relative")) {
     projectDropdownOpen.value = false;
@@ -1228,23 +1225,5 @@ function formatDate(iso) {
 
 .dark .prose b {
   color: #f9fafb; /* Tailwind gray-50 */
-}
-
-#app {
-  /* Ensure no unintended scaling */
-  transform: scale(1);
-  transform-origin: top left;
-  width: 100%;
-}
-
-/* Global reset for any rogue styles */
-* {
-  max-width: 100%;
-}
-
-/* Ensure images don't break layout */
-img {
-  height: auto;
-  max-width: 100%;
 }
 </style>
