@@ -43,7 +43,7 @@
             stroke-linecap="round"
             stroke-linejoin="round"
             stroke-width="2"
-            d="M11 19l-7-7 7-7m8 14l-7-7 7-7"
+            :d="isCollapsed ? 'M13 5l7 7-7 7M5 5l7 7-7 7' : 'M11 19l-7-7 7-7m8 14l-7-7 7-7'"
           ></path>
         </svg>
       </button>
@@ -85,6 +85,7 @@
           <button
             @click="projectDropdownOpen = !projectDropdownOpen"
             class="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 transition-colors"
+            :title="isCollapsed ? (currentProject?.name || 'Select Project') : ''"
           >
             <div
               class="w-6 h-6 bg-blue-500 rounded flex items-center justify-center flex-shrink-0"
@@ -108,12 +109,13 @@
                 {{ currentProject?.name || "Select Project" }}
               </div>
               <div class="text-xs text-gray-500 dark:text-gray-400">
-                {{ projects.length }} projects
+                {{ projects.length }} {{ projects.length === 1 ? 'project' : 'projects' }}
               </div>
             </div>
             <svg
               v-if="!isCollapsed"
-              class="w-4 h-4 text-gray-400"
+              class="w-4 h-4 text-gray-400 transition-transform"
+              :class="{ 'rotate-180': projectDropdownOpen }"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -150,9 +152,9 @@
                       currentProject?.id === project.id,
                   }"
                 >
-                  <div class="flex items-center gap-3">
+                  <div class="flex items-center gap-3 flex-1 min-w-0">
                     <div
-                      class="w-6 h-6 bg-blue-500 rounded flex items-center justify-center"
+                      class="w-6 h-6 bg-blue-500 rounded flex items-center justify-center flex-shrink-0"
                     >
                       <svg
                         class="w-4 h-4 text-white"
@@ -168,18 +170,19 @@
                         ></path>
                       </svg>
                     </div>
-                    <div>
-                      <div class="font-medium text-gray-800 dark:text-gray-200">
+                    <div class="flex-1 min-w-0">
+                      <div class="font-medium text-gray-800 dark:text-gray-200 truncate">
                         {{ project.name }}
                       </div>
                       <div class="text-xs text-gray-500 dark:text-gray-400">
-                        {{ project.taskCount || 0 }} tasks
+                        {{ project.taskCount || 0 }} {{ (project.taskCount || 0) === 1 ? 'task' : 'tasks' }}
                       </div>
                     </div>
                   </div>
                   <button
-                    @click.stop="deleteProject(project.id)"
-                    class="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500 hover:text-red-700 dark:hover:text-red-400 transition-all"
+                    v-if="projects.length > 1"
+                    @click.stop="confirmDeleteProject(project)"
+                    class="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500 hover:text-red-700 dark:hover:text-red-400 transition-all flex-shrink-0"
                     title="Delete Project"
                   >
                     <svg
@@ -319,11 +322,53 @@
         </div>
       </div>
     </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div
+      v-if="showDeleteConfirmation"
+      class="fixed inset-0 flex items-center justify-center z-50 p-4"
+    >
+      <div
+        class="absolute inset-0 bg-black bg-opacity-40"
+        @click="showDeleteConfirmation = false"
+      ></div>
+      <div
+        class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md z-50 overflow-hidden"
+      >
+        <div class="p-6">
+          <h3
+            class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4"
+          >
+            Delete Project
+          </h3>
+          <p class="text-gray-600 dark:text-gray-300 mb-4">
+            Are you sure you want to delete "<strong>{{ projectToDelete?.name }}</strong>"? 
+            This will permanently delete all tasks in this project. This action cannot be undone.
+          </p>
+        </div>
+        <div
+          class="bg-gray-50 dark:bg-gray-700 px-6 py-4 flex justify-end gap-3"
+        >
+          <button
+            @click="showDeleteConfirmation = false"
+            class="px-4 py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            @click="deleteProject"
+            class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+          >
+            Delete Project
+          </button>
+        </div>
+      </div>
+    </div>
   </aside>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, onBeforeUnmount } from "vue";
+import { ref, onMounted, onBeforeUnmount } from "vue";
 
 const props = defineProps({
   isCollapsed: {
@@ -333,6 +378,10 @@ const props = defineProps({
   currentProject: {
     type: Object,
     default: null,
+  },
+  projects: {
+    type: Array,
+    default: () => [],
   },
 });
 
@@ -347,19 +396,10 @@ const emit = defineEmits([
 // State
 const projectDropdownOpen = ref(false);
 const showCreateProjectModal = ref(false);
+const showDeleteConfirmation = ref(false);
+const projectToDelete = ref(null);
 const newProjectName = ref("");
 const newProjectDescription = ref("");
-
-// Projects data
-const projects = ref([
-  {
-    id: "1",
-    name: "My First Project",
-    description: "A sample project to get started",
-    taskCount: 5,
-    createdAt: new Date().toISOString(),
-  },
-]);
 
 // Methods
 function selectProject(project) {
@@ -371,14 +411,10 @@ function createProject() {
   if (!newProjectName.value.trim()) return;
 
   const newProject = {
-    id: Date.now().toString(),
     name: newProjectName.value.trim(),
     description: newProjectDescription.value.trim(),
-    taskCount: 0,
-    createdAt: new Date().toISOString(),
   };
 
-  projects.value.unshift(newProject);
   emit("project-create", newProject);
 
   // Reset form
@@ -387,23 +423,24 @@ function createProject() {
   showCreateProjectModal.value = false;
 }
 
-function deleteProject(projectId) {
-  if (
-    confirm(
-      "Are you sure you want to delete this project? This action cannot be undone."
-    )
-  ) {
-    const index = projects.value.findIndex((p) => p.id === projectId);
-    if (index > -1) {
-      projects.value.splice(index, 1);
-      emit("project-delete", projectId);
-    }
+function confirmDeleteProject(project) {
+  projectToDelete.value = project;
+  showDeleteConfirmation.value = true;
+  projectDropdownOpen.value = false;
+}
+
+function deleteProject() {
+  if (projectToDelete.value) {
+    emit("project-delete", projectToDelete.value.id);
+    projectToDelete.value = null;
   }
+  showDeleteConfirmation.value = false;
 }
 
 // Close dropdown when clicking outside
 function handleClickOutside(event) {
-  if (!event.target.closest(".relative")) {
+  const dropdown = event.target.closest('.relative');
+  if (!dropdown && projectDropdownOpen.value) {
     projectDropdownOpen.value = false;
   }
 }
@@ -416,3 +453,9 @@ onBeforeUnmount(() => {
   document.removeEventListener("click", handleClickOutside);
 });
 </script>
+
+<style scoped>
+.rotate-180 {
+  transform: rotate(180deg);
+}
+</style>

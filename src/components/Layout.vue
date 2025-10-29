@@ -5,6 +5,7 @@
       :is-collapsed="sidebarCollapsed"
       @toggle-collapse="sidebarCollapsed = !sidebarCollapsed"
       :current-project="currentProject"
+      :projects="projects"
       @project-change="handleProjectChange"
       @project-create="handleProjectCreate"
       @project-delete="handleProjectDelete"
@@ -27,7 +28,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
+import { ref } from "vue";
 import Sidebar from "./Sidebar.vue";
 import Navbar from "./Navbar.vue";
 import { useUser, useClerk } from "@clerk/vue";
@@ -54,10 +55,21 @@ function handleProjectDelete(projectId) {
   emit("project-delete", projectId);
 }
 
+const props = defineProps({
+  currentProject: {
+    type: Object,
+    default: null,
+  },
+  projects: {
+    type: Array,
+    default: () => [],
+  },
+});
+
 async function handleSignOut() {
   try {
     await clerk.value.signOut();
-    window.location.href = "/"; // redirect to home or login page
+    window.location.href = "/"; 
   } catch (error) {
     console.error("Error signing out:", error);
   }

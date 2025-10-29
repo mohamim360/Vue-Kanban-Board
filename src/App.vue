@@ -2,6 +2,7 @@
   <AuthWrapper>
     <Layout
       :current-project="currentProject"
+      :projects="projects"
       @project-change="handleProjectChange"
       @project-create="handleProjectCreate"
       @project-delete="handleProjectDelete"
@@ -612,8 +613,6 @@ import ToastNotification from "./components/ToastNotification.vue";
 import AuthWrapper from "./components/AuthWrapper.vue";
 import Layout from "./components/Layout.vue";
 import { useProjects } from "./composables/useProjects.js";
-import { load, save } from "./utilits/storage";
-
 
 const isDark = useDark(); // reactive boolean
 const toggleDark = useToggle(isDark);
@@ -628,6 +627,7 @@ const {
   createProject,
   switchProject,
   deleteProject,
+  updateCurrentProject,
   updateProjectTaskCount,
 } = useProjects();
 
@@ -850,8 +850,7 @@ const boardTitle = ref("Project Kanban Board");
 function updateBoardTitle(newTitle) {
   boardTitle.value = newTitle;
   if (currentProject.value) {
-    currentProject.value.name = newTitle;
-    saveProjectData();
+    updateCurrentProject({ name: newTitle });
   }
 }
 
@@ -876,25 +875,48 @@ function handleProjectDelete(projectId) {
 
 function loadProjectData() {
   if (currentProject.value) {
-    // Load project-specific data
+    // Load columns
     columns.todo.cards = currentProject.value.columns?.todo?.cards || [];
     columns.inprogress.cards =
       currentProject.value.columns?.inprogress?.cards || [];
     columns.done.cards = currentProject.value.columns?.done?.cards || [];
+
+    // Load title
     boardTitle.value = currentProject.value.name || "Project Kanban Board";
+  } else {
+    // Clear everything if no project
+    columns.todo.cards = [];
+    columns.inprogress.cards = [];
+    columns.done.cards = [];
+    boardTitle.value = "Project Kanban Board";
   }
 }
 
 function saveProjectData() {
   if (currentProject.value) {
-    currentProject.value.columns = {
-      todo: { name: "To Do", cards: columns.todo.cards },
-      inprogress: { name: "In Progress", cards: columns.inprogress.cards },
-      done: { name: "Done", cards: columns.done.cards },
+    const updatedProject = {
+      columns: {
+        todo: { name: "To Do", cards: columns.todo.cards },
+        inprogress: { name: "In Progress", cards: columns.inprogress.cards },
+        done: { name: "Done", cards: columns.done.cards },
+      },
+      name: boardTitle.value,
     };
+
+    updateCurrentProject(updatedProject);
     updateProjectTaskCount(currentProject.value.id);
   }
 }
+
+import { watch } from "vue";
+
+watch(
+  currentProject,
+  () => {
+    loadProjectData();
+  },
+  { immediate: false }
+);
 
 onMounted(() => {
   loadProjects();

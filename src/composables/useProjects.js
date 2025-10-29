@@ -1,27 +1,33 @@
-import React, { useState, useEffect } from 'react';
-import { Search, Plus, MoreVertical, Calendar, FolderPlus, Folder, Edit2, Trash2 } from 'lucide-react';
+// src/composables/useProjects.js
+import { ref } from 'vue';
 
-const uid = () => Math.random().toString(36).slice(2, 10);
-const now = () => new Date().toISOString();
+const PROJECTS_KEY = 'kanban-projects';
+const CURRENT_PROJECT_KEY = 'kanban-current-project';
 
-function useProjects() {
-  const [projects, setProjects] = useState([]);
-  const [currentProject, setCurrentProject] = useState(null);
+export function useProjects() {
+  const projects = ref([]);
+  const currentProject = ref(null);
 
   const loadProjects = () => {
     try {
-      const saved = localStorage.getItem('kanban-projects');
+      const saved = localStorage.getItem(PROJECTS_KEY);
       if (saved) {
         const loadedProjects = JSON.parse(saved);
-        setProjects(loadedProjects);
-        if (!currentProject && loadedProjects.length > 0) {
-          setCurrentProject(loadedProjects[0]);
+        projects.value = loadedProjects;
+        
+        // Load last active project
+        const currentId = localStorage.getItem(CURRENT_PROJECT_KEY);
+        if (currentId) {
+          currentProject.value = loadedProjects.find(p => p.id === currentId) || loadedProjects[0];
+        } else {
+          currentProject.value = loadedProjects[0];
         }
       } else {
+        // Create default project
         const defaultProject = createDefaultProject();
-        setProjects([defaultProject]);
-        setCurrentProject(defaultProject);
-        localStorage.setItem('kanban-projects', JSON.stringify([defaultProject]));
+        projects.value = [defaultProject];
+        currentProject.value = defaultProject;
+        saveProjects([defaultProject]);
       }
     } catch (e) {
       console.error('Failed to load projects', e);
@@ -29,10 +35,11 @@ function useProjects() {
   };
 
   const createDefaultProject = () => ({
-    id: 'default-' + uid(),
+    id: 'default-' + Math.random().toString(36).slice(2, 10),
     name: 'My First Project',
     description: 'Welcome to your Kanban board!',
-    createdAt: now(),
+    createdAt: new Date().toISOString(),
+    taskCount: 0,
     columns: {
       todo: { name: 'To Do', cards: [] },
       inprogress: { name: 'In Progress', cards: [] },
@@ -42,8 +49,8 @@ function useProjects() {
 
   const saveProjects = (updatedProjects) => {
     try {
-      localStorage.setItem('kanban-projects', JSON.stringify(updatedProjects));
-      setProjects(updatedProjects);
+      localStorage.setItem(PROJECTS_KEY, JSON.stringify(updatedProjects));
+      projects.value = updatedProjects;
     } catch (e) {
       console.error('Failed to save projects', e);
     }
@@ -51,47 +58,70 @@ function useProjects() {
 
   const createProject = (projectData) => {
     const newProject = {
-      id: uid(),
+      id: Math.random().toString(36).slice(2, 10),
       name: projectData.name,
       description: projectData.description || '',
-      createdAt: now(),
+      createdAt: new Date().toISOString(),
+      taskCount: 0,
       columns: {
         todo: { name: 'To Do', cards: [] },
         inprogress: { name: 'In Progress', cards: [] },
         done: { name: 'Done', cards: [] }
       }
     };
-    const updated = [newProject, ...projects];
+    const updated = [newProject, ...projects.value];
     saveProjects(updated);
-    setCurrentProject(newProject);
+    currentProject.value = newProject;
+    localStorage.setItem(CURRENT_PROJECT_KEY, newProject.id);
     return newProject;
   };
 
   const switchProject = (projectId) => {
-    const project = projects.find(p => p.id === projectId);
+    const project = projects.value.find(p => p.id === projectId);
     if (project) {
-      setCurrentProject(project);
+      currentProject.value = project;
+      localStorage.setItem(CURRENT_PROJECT_KEY, projectId);
       return project;
     }
     return null;
   };
 
   const deleteProject = (projectId) => {
-    const filtered = projects.filter(p => p.id !== projectId);
+    const filtered = projects.value.filter(p => p.id !== projectId);
     saveProjects(filtered);
-    if (currentProject?.id === projectId) {
-      setCurrentProject(filtered.length > 0 ? filtered[0] : null);
+    
+    if (currentProject.value?.id === projectId) {
+      currentProject.value = filtered.length > 0 ? filtered[0] : null;
+      if (currentProject.value) {
+        localStorage.setItem(CURRENT_PROJECT_KEY, currentProject.value.id);
+      } else {
+        localStorage.removeItem(CURRENT_PROJECT_KEY);
+      }
     }
     return true;
   };
 
   const updateCurrentProject = (updatedData) => {
-    if (!currentProject) return;
-    const updated = projects.map(p =>
-      p.id === currentProject.id ? { ...p, ...updatedData } : p
+    if (!currentProject.value) return;
+    
+    const updated = projects.value.map(p =>
+      p.id === currentProject.value.id ? { ...p, ...updatedData } : p
     );
     saveProjects(updated);
-    setCurrentProject({ ...currentProject, ...updatedData });
+    currentProject.value = { ...currentProject.value, ...updatedData };
+  };
+
+  const updateProjectTaskCount = (projectId) => {
+    const project = projects.value.find(p => p.id === projectId);
+    if (project) {
+      const count = 
+        (project.columns?.todo?.cards?.length || 0) +
+        (project.columns?.inprogress?.cards?.length || 0) +
+        (project.columns?.done?.cards?.length || 0);
+      
+      project.taskCount = count;
+      updateCurrentProject({ taskCount: count });
+    }
   };
 
   return {
@@ -101,6 +131,7 @@ function useProjects() {
     createProject,
     switchProject,
     deleteProject,
-    updateCurrentProject
+    updateCurrentProject,
+    updateProjectTaskCount
   };
 }
