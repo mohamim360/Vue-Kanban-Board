@@ -1,6 +1,5 @@
 <template>
   <AuthWrapper>
-  
     <Layout
       :current-project="currentProject"
       :projects="projects"
@@ -389,7 +388,7 @@
                       v-if="card.description"
                       class="prose prose-sm max-w-none text-gray-600 dark:text-gray-300 dark:prose-invert mb-3 line-clamp-2"
                       v-html="card.description"
-                    </div>
+                    ></div>
 
                     <!-- Tags -->
                     <div
@@ -603,7 +602,14 @@
 </template>
 
 <script setup>
-import { reactive, ref, onMounted, computed, onBeforeUnmount, watch } from "vue";
+import {
+  reactive,
+  ref,
+  onMounted,
+  computed,
+  onBeforeUnmount,
+  watch,
+} from "vue";
 import { useDark, useToggle } from "@vueuse/core";
 import EditTaskModal from "./components/EditTaskModal.vue";
 import AddTaskModal from "./components/AddTaskModal.vue";
@@ -617,8 +623,8 @@ import { useClerkAuth } from "./composables/useClerkAuth.js";
 const isDark = useDark();
 const toggleDark = useToggle(isDark);
 
-const { isClerkReady, authError, initializeClerk, getAuthToken } = useClerkAuth();
-
+const { isClerkReady, authError, initializeClerk, getAuthToken } =
+  useClerkAuth();
 
 // Project management
 const {
@@ -774,28 +780,25 @@ async function confirmDeleteAllAction() {
       // Delete all tasks in specific column
       const columnKey = deleteAllTarget.value;
       const status = columnKey.toUpperCase();
-      
+
       if (currentProject.value) {
         const tasks = await tasksAPI.getByProject(currentProject.value.id);
-        const columnTasks = tasks.data.filter(task => task.status === status);
-        
+        const columnTasks = tasks.data.filter((task) => task.status === status);
+
         for (const task of columnTasks) {
           await tasksAPI.delete(task.id);
         }
       }
-      
+
       // Clear local state
       columns[columnKey].cards.splice(0);
-      showToast(
-        `All tasks deleted from ${columns[columnKey].name}`,
-        "success"
-      );
+      showToast(`All tasks deleted from ${columns[columnKey].name}`, "success");
     }
   } catch (error) {
-    console.error('Error deleting all tasks:', error);
-    showToast('Failed to delete tasks', 'error');
+    console.error("Error deleting all tasks:", error);
+    showToast("Failed to delete tasks", "error");
   }
-  
+
   showDeleteAllModal.value = false;
   deleteAllTarget.value = null;
 }
@@ -815,9 +818,9 @@ function getUserInitials(userId) {
 
 function formatPriority(priority) {
   const priorityMap = {
-    'HIGH': 'High',
-    'MEDIUM': 'Medium', 
-    'LOW': 'Low'
+    HIGH: "High",
+    MEDIUM: "Medium",
+    LOW: "Low",
   };
   return priorityMap[priority] || priority;
 }
@@ -883,7 +886,7 @@ async function loadProjectData() {
     columns.done.cards = [];
 
     // Sort tasks into columns based on status
-    tasks.forEach(task => {
+    tasks.forEach((task) => {
       const status = task.status?.toLowerCase();
       if (columns[status]) {
         columns[status].cards.push({
@@ -899,8 +902,8 @@ async function loadProjectData() {
     // Load title
     boardTitle.value = currentProject.value.name || "Project Kanban Board";
   } catch (error) {
-    console.error('Error loading project data:', error);
-    showToast('Failed to load project data', 'error');
+    console.error("Error loading project data:", error);
+    showToast("Failed to load project data", "error");
   }
 }
 
@@ -912,13 +915,13 @@ async function addNewTask(task) {
       description: task.description,
       tags: task.tags || [],
       projectId: currentProject.value.id,
-      status: 'TODO', // Default to todo
+      status: "TODO", // Default to todo
       priority: task.priority.toUpperCase(),
       dueDate: task.dueDate ? new Date(task.dueDate).toISOString() : null,
       assignedUserId: task.assignedUser || null, // Map assignedUser to assignedUserId
     };
 
-    console.log('Creating task with data:', taskData);
+    console.log("Creating task with data:", taskData);
 
     const response = await tasksAPI.create(taskData);
     const newTask = response.data;
@@ -934,8 +937,8 @@ async function addNewTask(task) {
 
     showToast("Task added successfully");
   } catch (error) {
-    console.error('Error adding task:', error);
-    showToast('Failed to add task', 'error');
+    console.error("Error adding task:", error);
+    showToast("Failed to add task", "error");
     throw error;
   }
 }
@@ -970,7 +973,7 @@ function onDragEnd(e) {
 
 async function onDrop(e, toColumn) {
   e.preventDefault();
-  
+
   let payload = null;
   try {
     payload = JSON.parse(e.dataTransfer.getData("text/plain"));
@@ -990,7 +993,7 @@ async function onDrop(e, toColumn) {
     // Update local state
     const fromCol = columns[fromColumn];
     const toCol = columns[toColumn];
-    
+
     const idx = fromCol.cards.findIndex((c) => c.id === cardId);
     if (idx === -1) return;
 
@@ -1000,8 +1003,8 @@ async function onDrop(e, toColumn) {
 
     showToast(`Task moved to ${columns[toColumn].name}`);
   } catch (error) {
-    console.error('Error moving task:', error);
-    showToast('Failed to move task', 'error');
+    console.error("Error moving task:", error);
+    showToast("Failed to move task", "error");
   }
 }
 
@@ -1028,8 +1031,8 @@ async function moveCard(cardId, targetColumn) {
       }
     }
   } catch (error) {
-    console.error('Error moving task:', error);
-    showToast('Failed to move task', 'error');
+    console.error("Error moving task:", error);
+    showToast("Failed to move task", "error");
   }
 }
 
@@ -1043,20 +1046,22 @@ async function confirmDelete() {
   if (cardToDelete.value) {
     try {
       await tasksAPI.delete(cardToDelete.value);
-      
+
       // Remove from local state
       for (const k of columnsOrder) {
-        const i = columns[k].cards.findIndex((c) => c.id === cardToDelete.value);
+        const i = columns[k].cards.findIndex(
+          (c) => c.id === cardToDelete.value
+        );
         if (i > -1) {
           columns[k].cards.splice(i, 1);
           break;
         }
       }
-      
+
       showToast("Task deleted successfully");
     } catch (error) {
-      console.error('Error deleting task:', error);
-      showToast('Failed to delete task', 'error');
+      console.error("Error deleting task:", error);
+      showToast("Failed to delete task", "error");
     }
   }
   showDeleteConfirmation.value = false;
@@ -1087,7 +1092,7 @@ function startEdit(card, fromColumn) {
     dueDate: formatDateForInput(card.dueDate),
     assignedUser: card.assignedUser || "",
   });
-  
+
   isCloning.value = false;
   editing.value = true;
   dropdownOpen.value = null;
@@ -1155,7 +1160,7 @@ async function saveEdit(updatedTask) {
       assignedUserId: updatedTask.assignedUser || null,
     };
 
-    console.log('Updating task:', updatedTask.id, taskData);
+    console.log("Updating task:", updatedTask.id, taskData);
 
     // Update in backend
     const response = await tasksAPI.update(updatedTask.id, taskData);
@@ -1163,7 +1168,9 @@ async function saveEdit(updatedTask) {
 
     // Update local state
     for (const column of columnsOrder) {
-      const index = columns[column].cards.findIndex(c => c.id === updatedTask.id);
+      const index = columns[column].cards.findIndex(
+        (c) => c.id === updatedTask.id
+      );
       if (index > -1) {
         columns[column].cards[index] = {
           ...columns[column].cards[index],
@@ -1176,8 +1183,8 @@ async function saveEdit(updatedTask) {
 
     showToast("Task updated successfully");
   } catch (error) {
-    console.error('Error updating task:', error);
-    showToast('Failed to update task', 'error');
+    console.error("Error updating task:", error);
+    showToast("Failed to update task", "error");
   } finally {
     editing.value = false;
     isCloning.value = false;
@@ -1201,13 +1208,13 @@ async function handleCloneTask(cloneData) {
       description: cloneData.description,
       tags: cloneData.tags || [],
       projectId: currentProject.value.id,
-      status: 'TODO', // Default to todo for clones
+      status: "TODO", // Default to todo for clones
       priority: cloneData.priority,
       dueDate: ensureISODate(cloneData.dueDate),
       assignedUserId: cloneData.assignedUser || null,
     };
 
-    console.log('Creating cloned task:', taskData);
+    console.log("Creating cloned task:", taskData);
 
     const response = await tasksAPI.create(taskData);
     const newTask = response.data;
@@ -1225,8 +1232,8 @@ async function handleCloneTask(cloneData) {
     editing.value = false;
     isCloning.value = false;
   } catch (error) {
-    console.error('Error cloning task:', error);
-    showToast('Failed to clone task', 'error');
+    console.error("Error cloning task:", error);
+    showToast("Failed to clone task", "error");
     throw error;
   }
 }
@@ -1243,12 +1250,12 @@ function findCardColumn(cardId) {
 
 // Helper function to format dates for input fields
 function formatDateForInput(dateString) {
-  if (!dateString) return '';
+  if (!dateString) return "";
   try {
     const date = new Date(dateString);
-    return date.toISOString().split('T')[0];
+    return date.toISOString().split("T")[0];
   } catch {
-    return '';
+    return "";
   }
 }
 
@@ -1261,7 +1268,6 @@ function ensureISODate(dateString) {
     return null;
   }
 }
-
 
 function formatDate(iso) {
   try {
@@ -1287,40 +1293,46 @@ onMounted(async () => {
 
 // Test auth function
 async function testAuth() {
-  console.log('🧪 Testing authentication...');
-  
+  console.log("🧪 Testing authentication...");
+
   try {
     await initializeClerk();
     const token = await getAuthToken();
-    console.log('✅ Auth test successful, token length:', token.length);
-    
+    console.log("✅ Auth test successful, token length:", token.length);
+
     // Test API call with the token
-    const testResponse = await fetch('http://localhost:3000/projects', {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
+    const testResponse = await fetch(
+      "https://nestjs-kanban-board.vercel.app/projects",
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
       }
-    });
-    console.log('🧪 Test API response:', testResponse.status, testResponse.statusText);
-    
+    );
+    console.log(
+      "🧪 Test API response:",
+      testResponse.status,
+      testResponse.statusText
+    );
   } catch (error) {
-    console.error('❌ Auth test failed:', error);
+    console.error("❌ Auth test failed:", error);
   }
 }
 
 // Initialize when component mounts
 onMounted(async () => {
-  console.log('🚀 Main component mounted');
-  
+  console.log("🚀 Main component mounted");
+
   // Wait a bit for Clerk to initialize, then test
   setTimeout(() => {
     testAuth();
   }, 1000);
-  
+
   // Load projects only when Clerk is ready
   watch(isClerkReady, async (ready) => {
     if (ready) {
-      console.log('✅ Clerk ready, loading projects...');
+      console.log("✅ Clerk ready, loading projects...");
       await loadProjects();
       if (currentProject.value) {
         await loadProjectData();
@@ -1328,8 +1340,6 @@ onMounted(async () => {
     }
   });
 });
-
-
 </script>
 
 <style>
