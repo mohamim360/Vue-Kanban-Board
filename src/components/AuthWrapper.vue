@@ -5,9 +5,7 @@
       v-if="!isSignedIn"
       class="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center"
     >
-      <div
-       
-      >
+      <div class="w-full max-w-md p-6">
         <div class="text-center mb-8">
           <div
             class="w-16 h-16 bg-indigo-600 rounded-xl flex items-center justify-center mx-auto mb-4"
@@ -74,8 +72,29 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
-import { useUser, SignIn } from "@clerk/vue";
+import { ref, onMounted, watch } from "vue";
+import { useUser, SignIn, useSession } from "@clerk/vue";
 
-const { isLoaded, isSignedIn } = useUser();
+const { isLoaded, isSignedIn, user } = useUser();
+const { session } = useSession();
+
+// Debug session and token
+watch([isLoaded, isSignedIn, session], async ([loaded, signedIn, currentSession]) => {
+  if (loaded && signedIn && currentSession) {
+    console.log('User authenticated:', user.value?.fullName);
+    try {
+      const token = await currentSession.getToken();
+      console.log('Session token available:', !!token);
+      if (token) {
+        console.log('Token preview:', token.substring(0, 20) + '...');
+      }
+    } catch (error) {
+      console.error('Error getting token:', error);
+    }
+  }
+});
+
+onMounted(() => {
+  console.log('AuthWrapper mounted - isLoaded:', isLoaded.value, 'isSignedIn:', isSignedIn.value);
+});
 </script>
