@@ -1,5 +1,6 @@
 <template>
   <AuthWrapper>
+  
     <Layout
       :current-project="currentProject"
       :projects="projects"
@@ -42,7 +43,6 @@
         </div>
 
         <!-- Search, Filter and Sort Controls -->
-
         <div class="mb-6 p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
           <div class="flex flex-col md:flex-row gap-4">
             <!-- Search -->
@@ -176,7 +176,7 @@
               </div>
 
               <!-- Column Actions Dropdown -->
-              <div class="relative" ref="columnDropdownRef">
+              <div class="relative">
                 <button
                   @click="toggleColumnDropdown(column)"
                   class="text-gray-600 hover:text-gray-800 dark:text-gray-300 dark:hover:text-gray-100"
@@ -275,10 +275,10 @@
                 <div
                   class="absolute top-0 left-0 h-1.5 w-full rounded-t-xl"
                   :class="{
-                    'bg-red-700 dark:bg-red-900': card.priority === 'High',
+                    'bg-red-700 dark:bg-red-900': card.priority === 'HIGH',
                     'bg-orange-600 dark:bg-orange-800':
-                      card.priority === 'Medium',
-                    'bg-slate-500': card.priority === 'Low',
+                      card.priority === 'MEDIUM',
+                    'bg-slate-500': card.priority === 'LOW',
                   }"
                 ></div>
 
@@ -298,14 +298,14 @@
                           class="flex-shrink-0 px-2 py-1 text-xs font-medium rounded-full"
                           :class="{
                             'bg-red-200 text-red-800 dark:bg-red-900 dark:text-red-200':
-                              card.priority === 'High',
+                              card.priority === 'HIGH',
                             'bg-orange-200 text-orange-800 dark:bg-orange-900 dark:text-orange-200':
-                              card.priority === 'Medium',
+                              card.priority === 'MEDIUM',
                             'bg-slate-300 text-slate-800 dark:bg-slate-700 dark:text-slate-300':
-                              card.priority === 'Low',
+                              card.priority === 'LOW',
                           }"
                         >
-                          {{ card.priority }}
+                          {{ formatPriority(card.priority) }}
                         </div>
 
                         <!-- ⋮ Dropdown Menu -->
@@ -321,9 +321,7 @@
                               fill="currentColor"
                             >
                               <path
-                                d="M6 10a2 2 0 11-4 0 2 2 0 014 0zm6 0a2 2 0 
-                         11-4 0 2 2 0 014 0zm6 0a2 2 0 11-4 0  
-                         2 2 0 014 0z"
+                                d="M6 10a2 2 0 11-4 0 2 2 0 014 0zm6 0a2 2 0 11-4 0 2 2 0 014 0zm6 0a2 2 0 11-4 0 2 2 0 014 0z"
                               />
                             </svg>
                           </button>
@@ -386,11 +384,12 @@
                       </div>
                     </div>
 
-                    <!-- Description
-                  <div
-                    class="prose prose-sm max-w-none text-gray-600 dark:text-gray-300 dark:prose-invert mb-3 line-clamp-2"
-                    v-html="sanitizeHtml(card.description)"
-                  ></div> -->
+                    <!-- Description -->
+                    <div
+                      v-if="card.description"
+                      class="prose prose-sm max-w-none text-gray-600 dark:text-gray-300 dark:prose-invert mb-3 line-clamp-2"
+                      v-html="card.description"
+                    </div>
 
                     <!-- Tags -->
                     <div
@@ -484,6 +483,7 @@
             </div>
           </div>
         </div>
+
         <!-- Add Modal -->
         <AddTaskModal
           v-model:visible="showAddModal"
@@ -492,7 +492,6 @@
         />
 
         <!-- Edit Modal -->
-
         <EditTaskModal
           v-model:visible="editing"
           :task="editForm"
@@ -501,6 +500,7 @@
           @clone="confirmClone"
           @error="showToast($event, 'error')"
         />
+
         <!-- Delete Modal -->
         <div
           v-if="showDeleteConfirmation"
@@ -591,7 +591,6 @@
         </div>
 
         <!-- Toast Notification -->
-
         <ToastNotification
           v-if="toast.show"
           :message="toast.message"
@@ -604,20 +603,22 @@
 </template>
 
 <script setup>
-import { reactive, ref, onMounted, computed, onBeforeUnmount } from "vue";
+import { reactive, ref, onMounted, computed, onBeforeUnmount, watch } from "vue";
 import { useDark, useToggle } from "@vueuse/core";
-import { SunIcon, MoonIcon, Cog6ToothIcon } from "@heroicons/vue/24/solid";
 import EditTaskModal from "./components/EditTaskModal.vue";
 import AddTaskModal from "./components/AddTaskModal.vue";
 import ToastNotification from "./components/ToastNotification.vue";
 import AuthWrapper from "./components/AuthWrapper.vue";
 import Layout from "./components/Layout.vue";
 import { useProjects } from "./composables/useProjects.js";
+import { tasksAPI } from "./api/tasks.js";
+import { useClerkAuth } from "./composables/useClerkAuth.js";
 
-const isDark = useDark(); // reactive boolean
+const isDark = useDark();
 const toggleDark = useToggle(isDark);
-const uid = () => Math.random().toString(36).slice(2, 10);
-const now = () => new Date().toISOString();
+
+const { isClerkReady, authError, initializeClerk, getAuthToken } = useClerkAuth();
+
 
 // Project management
 const {
@@ -635,6 +636,7 @@ const projectDropdownOpen = ref(false);
 const columnDropdownOpen = ref(null);
 const showDeleteAllModal = ref(false);
 const deleteAllTarget = ref(null);
+
 const handleClickOutside = (event) => {
   if (!event.target.closest(".relative")) {
     projectDropdownOpen.value = false;
@@ -656,6 +658,13 @@ const searchQuery = ref("");
 const userFilter = ref("");
 const tagFilter = ref("");
 const sortBy = ref("priority");
+
+// Demo users (you might want to fetch these from backend)
+const demoUsers = [
+  { id: "u1", name: "Alice Johnson" },
+  { id: "u2", name: "Bob Smith" },
+  { id: "u3", name: "Charlie Davis" },
+];
 
 // Compute all unique tags across all tasks
 const allTags = computed(() => {
@@ -701,7 +710,7 @@ function filteredAndSortedCards(columnKey) {
   }
 
   // Apply sorting
-  const priorityOrder = { High: 3, Medium: 2, Low: 1 };
+  const priorityOrder = { HIGH: 3, MEDIUM: 2, LOW: 1 };
 
   switch (sortBy.value) {
     case "priority":
@@ -746,29 +755,50 @@ function confirmDeleteAllProject() {
   projectDropdownOpen.value = false;
 }
 
-function confirmDeleteAllAction() {
-  if (deleteAllTarget.value === "project") {
-    for (const k of columnsOrder) {
-      columns[k].cards.splice(0);
+async function confirmDeleteAllAction() {
+  try {
+    if (deleteAllTarget.value === "project") {
+      // Delete all tasks in project
+      if (currentProject.value) {
+        const tasks = await tasksAPI.getByProject(currentProject.value.id);
+        for (const task of tasks.data) {
+          await tasksAPI.delete(task.id);
+        }
+      }
+      // Clear local state
+      for (const k of columnsOrder) {
+        columns[k].cards.splice(0);
+      }
+      showToast("All project tasks deleted", "success");
+    } else {
+      // Delete all tasks in specific column
+      const columnKey = deleteAllTarget.value;
+      const status = columnKey.toUpperCase();
+      
+      if (currentProject.value) {
+        const tasks = await tasksAPI.getByProject(currentProject.value.id);
+        const columnTasks = tasks.data.filter(task => task.status === status);
+        
+        for (const task of columnTasks) {
+          await tasksAPI.delete(task.id);
+        }
+      }
+      
+      // Clear local state
+      columns[columnKey].cards.splice(0);
+      showToast(
+        `All tasks deleted from ${columns[columnKey].name}`,
+        "success"
+      );
     }
-    showToast("All project tasks deleted", "success");
-  } else {
-    columns[deleteAllTarget.value].cards.splice(0);
-    showToast(
-      `All tasks deleted from ${columns[deleteAllTarget.value].name}`,
-      "success"
-    );
+  } catch (error) {
+    console.error('Error deleting all tasks:', error);
+    showToast('Failed to delete tasks', 'error');
   }
-  saveProjectData();
+  
   showDeleteAllModal.value = false;
   deleteAllTarget.value = null;
 }
-
-const demoUsers = [
-  { id: "u1", name: "Alice Johnson" },
-  { id: "u2", name: "Bob Smith" },
-  { id: "u3", name: "Charlie Davis" },
-];
 
 function getUserName(userId) {
   return demoUsers.find((u) => u.id === userId)?.name || "Unknown";
@@ -782,6 +812,16 @@ function getUserInitials(userId) {
     .join("")
     .toUpperCase();
 }
+
+function formatPriority(priority) {
+  const priorityMap = {
+    'HIGH': 'High',
+    'MEDIUM': 'Medium', 
+    'LOW': 'Low'
+  };
+  return priorityMap[priority] || priority;
+}
+
 const columns = reactive({
   todo: { name: "To Do", cards: [] },
   inprogress: { name: "In Progress", cards: [] },
@@ -790,8 +830,6 @@ const columns = reactive({
 
 const columnsOrder = ["todo", "inprogress", "done"];
 const dropdownOpen = ref(null);
-const dragging = ref(null);
-const dragFrom = ref(null);
 const showDeleteConfirmation = ref(false);
 const cardToDelete = ref(null);
 
@@ -799,7 +837,7 @@ const cardToDelete = ref(null);
 const toast = reactive({
   show: false,
   message: "",
-  type: "success", // can be 'success', 'error', 'info'
+  type: "success",
 });
 
 function showToast(message, type = "success") {
@@ -811,37 +849,7 @@ function showToast(message, type = "success") {
   }, 3000);
 }
 
-// Edit form
-const editing = ref(false);
-const isCloning = ref(false);
-const editForm = reactive({
-  id: "",
-  title: "",
-  description: "",
-  tags: [],
-  priority: "Medium",
-  dueDate: "",
-  assignedUser: "",
-});
-
 const showAddModal = ref(false);
-
-function addNewTask(task) {
-  const card = {
-    id: uid(),
-    title: task.title.trim(),
-    description: task.description || "",
-    tags: [...task.tags],
-    priority: task.priority,
-    dueDate: task.dueDate || "",
-    assignedUser: task.assignedUser || "",
-    createdAt: now(),
-  };
-
-  columns.todo.cards.unshift(card);
-  saveProjectData();
-  showToast("Task added successfully");
-}
 
 // Add a reactive variable for the board title
 const boardTitle = ref("Project Kanban Board");
@@ -854,79 +862,102 @@ function updateBoardTitle(newTitle) {
   }
 }
 
-// Project management event handlers
-function handleProjectChange(project) {
-  switchProject(project.id);
-  loadProjectData();
-}
-
-function handleProjectCreate(projectData) {
-  const newProject = createProject(projectData);
-  loadProjectData();
-  showToast(`Project "${newProject.name}" created successfully`);
-}
-
-function handleProjectDelete(projectId) {
-  if (deleteProject(projectId)) {
-    loadProjectData();
-    showToast("Project deleted successfully");
+// Load project data when current project changes
+watch(currentProject, async (newProject) => {
+  if (newProject) {
+    await loadProjectData();
   }
-}
+});
 
-function loadProjectData() {
-  if (currentProject.value) {
-    // Load columns
-    columns.todo.cards = currentProject.value.columns?.todo?.cards || [];
-    columns.inprogress.cards =
-      currentProject.value.columns?.inprogress?.cards || [];
-    columns.done.cards = currentProject.value.columns?.done?.cards || [];
+// Load tasks for current project
+async function loadProjectData() {
+  if (!currentProject.value) return;
 
-    // Load title
-    boardTitle.value = currentProject.value.name || "Project Kanban Board";
-  } else {
-    // Clear everything if no project
+  try {
+    const response = await tasksAPI.getByProject(currentProject.value.id);
+    const tasks = response.data;
+
+    // Clear existing cards
     columns.todo.cards = [];
     columns.inprogress.cards = [];
     columns.done.cards = [];
-    boardTitle.value = "Project Kanban Board";
+
+    // Sort tasks into columns based on status
+    tasks.forEach(task => {
+      const status = task.status?.toLowerCase();
+      if (columns[status]) {
+        columns[status].cards.push({
+          ...task,
+          // Map backend fields to frontend format
+          assignedUser: task.assignedUserId,
+          dueDate: task.dueDate,
+          createdAt: task.createdAt,
+        });
+      }
+    });
+
+    // Load title
+    boardTitle.value = currentProject.value.name || "Project Kanban Board";
+  } catch (error) {
+    console.error('Error loading project data:', error);
+    showToast('Failed to load project data', 'error');
   }
 }
 
-function saveProjectData() {
-  if (currentProject.value) {
-    const updatedProject = {
-      columns: {
-        todo: { name: "To Do", cards: columns.todo.cards },
-        inprogress: { name: "In Progress", cards: columns.inprogress.cards },
-        done: { name: "Done", cards: columns.done.cards },
-      },
-      name: boardTitle.value,
+// Add new task
+async function addNewTask(task) {
+  try {
+    const taskData = {
+      title: task.title,
+      description: task.description,
+      tags: task.tags || [],
+      projectId: currentProject.value.id,
+      status: 'TODO', // Default to todo
+      priority: task.priority.toUpperCase(),
+      dueDate: task.dueDate ? new Date(task.dueDate).toISOString() : null,
+      assignedUserId: task.assignedUser || null, // Map assignedUser to assignedUserId
     };
 
-    updateCurrentProject(updatedProject);
-    updateProjectTaskCount(currentProject.value.id);
+    console.log('Creating task with data:', taskData);
+
+    const response = await tasksAPI.create(taskData);
+    const newTask = response.data;
+
+    // Add to appropriate column
+    const status = newTask.status.toLowerCase();
+    if (columns[status]) {
+      columns[status].cards.unshift({
+        ...newTask,
+        assignedUser: newTask.assignedUserId, // Map back for frontend display
+      });
+    }
+
+    showToast("Task added successfully");
+  } catch (error) {
+    console.error('Error adding task:', error);
+    showToast('Failed to add task', 'error');
+    throw error;
   }
 }
 
-import { watch } from "vue";
+// Project management event handlers
+async function handleProjectChange(project) {
+  await switchProject(project.id);
+}
 
-watch(
-  currentProject,
-  () => {
-    loadProjectData();
-  },
-  { immediate: false }
-);
+async function handleProjectCreate(projectData) {
+  const newProject = await createProject(projectData);
+  await switchProject(newProject.id);
+  showToast(`Project "${newProject.name}" created successfully`);
+}
 
-onMounted(() => {
-  loadProjects();
-  loadProjectData();
-});
+async function handleProjectDelete(projectId) {
+  await deleteProject(projectId);
+  showToast("Project deleted successfully");
+}
 
+// Drag and drop functions
 function onDragStart(e, cardId, fromColumn) {
-  dragging.value = cardId;
-  dragFrom.value = fromColumn;
-  e.dataTransfer.effectAllowed = "move";
   e.dataTransfer.setData("text/plain", JSON.stringify({ cardId, fromColumn }));
   setTimeout(() => {
     e.target.classList.add("opacity-30");
@@ -935,49 +966,70 @@ function onDragStart(e, cardId, fromColumn) {
 
 function onDragEnd(e) {
   e.target.classList.remove("opacity-30");
-  dragging.value = null;
-  dragFrom.value = null;
 }
 
-function onDrop(e, toColumn) {
+async function onDrop(e, toColumn) {
   e.preventDefault();
-  e.target.classList.remove("bg-gray-50");
-
+  
   let payload = null;
   try {
     payload = JSON.parse(e.dataTransfer.getData("text/plain"));
   } catch {}
 
-  const cardId = payload?.cardId ?? dragging.value;
-  const fromColumn = payload?.fromColumn ?? dragFrom.value;
+  const cardId = payload?.cardId;
+  const fromColumn = payload?.fromColumn;
 
   if (!cardId || !fromColumn) return;
   if (fromColumn === toColumn) return;
 
-  const idx = columns[fromColumn].cards.findIndex((c) => c.id === cardId);
-  if (idx === -1) return;
+  try {
+    // Update task status in backend
+    const status = toColumn.toUpperCase();
+    await tasksAPI.move(cardId, status);
 
-  const [card] = columns[fromColumn].cards.splice(idx, 1);
-  columns[toColumn].cards.unshift(card);
-  saveProjectData();
-  showToast(`Task moved to ${columns[toColumn].name}`);
+    // Update local state
+    const fromCol = columns[fromColumn];
+    const toCol = columns[toColumn];
+    
+    const idx = fromCol.cards.findIndex((c) => c.id === cardId);
+    if (idx === -1) return;
+
+    const [card] = fromCol.cards.splice(idx, 1);
+    card.status = status;
+    toCol.cards.unshift(card);
+
+    showToast(`Task moved to ${columns[toColumn].name}`);
+  } catch (error) {
+    console.error('Error moving task:', error);
+    showToast('Failed to move task', 'error');
+  }
 }
 
 function toggleDropdown(id) {
   dropdownOpen.value = dropdownOpen.value === id ? null : id;
 }
 
-function moveCard(cardId, targetColumn) {
-  for (const k of columnsOrder) {
-    const i = columns[k].cards.findIndex((c) => c.id === cardId);
-    if (i > -1) {
-      const [card] = columns[k].cards.splice(i, 1);
-      columns[targetColumn].cards.unshift(card);
-      dropdownOpen.value = null;
-      saveProjectData();
-      showToast(`Task moved to ${columns[targetColumn].name}`);
-      return;
+async function moveCard(cardId, targetColumn) {
+  try {
+    // Update task status in backend
+    const status = targetColumn.toUpperCase();
+    await tasksAPI.move(cardId, status);
+
+    // Update local state
+    for (const k of columnsOrder) {
+      const i = columns[k].cards.findIndex((c) => c.id === cardId);
+      if (i > -1) {
+        const [card] = columns[k].cards.splice(i, 1);
+        card.status = status;
+        columns[targetColumn].cards.unshift(card);
+        dropdownOpen.value = null;
+        showToast(`Task moved to ${columns[targetColumn].name}`);
+        return;
+      }
     }
+  } catch (error) {
+    console.error('Error moving task:', error);
+    showToast('Failed to move task', 'error');
   }
 }
 
@@ -987,30 +1039,56 @@ function showDeleteModal(cardId) {
   dropdownOpen.value = null;
 }
 
-function confirmDelete() {
+async function confirmDelete() {
   if (cardToDelete.value) {
-    for (const k of columnsOrder) {
-      const i = columns[k].cards.findIndex((c) => c.id === cardToDelete.value);
-      if (i > -1) {
-        columns[k].cards.splice(i, 1);
-        saveProjectData();
-        showToast("Task deleted successfully");
-        break;
+    try {
+      await tasksAPI.delete(cardToDelete.value);
+      
+      // Remove from local state
+      for (const k of columnsOrder) {
+        const i = columns[k].cards.findIndex((c) => c.id === cardToDelete.value);
+        if (i > -1) {
+          columns[k].cards.splice(i, 1);
+          break;
+        }
       }
+      
+      showToast("Task deleted successfully");
+    } catch (error) {
+      console.error('Error deleting task:', error);
+      showToast('Failed to delete task', 'error');
     }
   }
   showDeleteConfirmation.value = false;
   cardToDelete.value = null;
 }
 
+// Edit form
+const editing = ref(false);
+const isCloning = ref(false);
+const editForm = reactive({
+  id: "",
+  title: "",
+  description: "",
+  tags: [],
+  priority: "MEDIUM",
+  dueDate: "",
+  assignedUser: "",
+});
+
+// Start editing a task
 function startEdit(card, fromColumn) {
-  editForm.id = card.id;
-  editForm.title = card.title;
-  editForm.description = card.description || "";
-  editForm.tags = [...(card.tags || [])];
-  editForm.priority = card.priority;
-  editForm.dueDate = card.dueDate || "";
-  editForm.assignedUser = card.assignedUser || "";
+  Object.assign(editForm, {
+    id: card.id,
+    title: card.title,
+    description: card.description || "",
+    tags: [...(card.tags || [])],
+    priority: card.priority,
+    dueDate: formatDateForInput(card.dueDate),
+    assignedUser: card.assignedUser || "",
+  });
+  
+  isCloning.value = false;
   editing.value = true;
   dropdownOpen.value = null;
 }
@@ -1042,13 +1120,15 @@ function cloneTask(card) {
   const suggestedTitle = `${baseTitle} (Copy ${copyNumber})`;
 
   // Populate the edit form with the card data and suggested title
-  editForm.id = card.id; // Keep original ID for reference
-  editForm.title = suggestedTitle;
-  editForm.description = card.description || "";
-  editForm.tags = [...(card.tags || [])];
-  editForm.priority = card.priority;
-  editForm.dueDate = card.dueDate || "";
-  editForm.assignedUser = card.assignedUser || "";
+  Object.assign(editForm, {
+    id: card.id, // Keep original ID for reference
+    title: suggestedTitle,
+    description: card.description || "",
+    tags: [...(card.tags || [])],
+    priority: card.priority,
+    dueDate: formatDateForInput(card.dueDate),
+    assignedUser: card.assignedUser || "",
+  });
 
   // Set cloning mode and open the modal
   isCloning.value = true;
@@ -1056,53 +1136,99 @@ function cloneTask(card) {
   dropdownOpen.value = null;
 }
 
-// New function to handle the actual cloning after editing
-function confirmClone(clonedData) {
-  const currentColumn = findCardColumn(editForm.id);
-  if (!currentColumn) return;
+// Save edited task
+async function saveEdit(updatedTask) {
+  try {
+    if (isCloning.value) {
+      // If we're in cloning mode, create a new task
+      await handleCloneTask(updatedTask);
+      return;
+    }
 
-  // Create the cloned card with the edited data
-  const clonedCard = {
-    ...clonedData,
-    id: uid(), // New ID for the clone
-    createdAt: now(),
-  };
+    // Regular edit functionality
+    const taskData = {
+      title: updatedTask.title,
+      description: updatedTask.description,
+      tags: updatedTask.tags || [],
+      priority: updatedTask.priority,
+      dueDate: ensureISODate(updatedTask.dueDate),
+      assignedUserId: updatedTask.assignedUser || null,
+    };
 
-  // Add the cloned card to the same column as the original
-  columns[currentColumn].cards.unshift(clonedCard);
-  saveProjectData();
-  showToast("Task cloned successfully");
+    console.log('Updating task:', updatedTask.id, taskData);
 
-  // Reset the cloning state
-  isCloning.value = false;
+    // Update in backend
+    const response = await tasksAPI.update(updatedTask.id, taskData);
+    const updatedTaskFromAPI = response.data;
+
+    // Update local state
+    for (const column of columnsOrder) {
+      const index = columns[column].cards.findIndex(c => c.id === updatedTask.id);
+      if (index > -1) {
+        columns[column].cards[index] = {
+          ...columns[column].cards[index],
+          ...updatedTaskFromAPI,
+          assignedUser: updatedTaskFromAPI.assignedUserId,
+        };
+        break;
+      }
+    }
+
+    showToast("Task updated successfully");
+  } catch (error) {
+    console.error('Error updating task:', error);
+    showToast('Failed to update task', 'error');
+  } finally {
+    editing.value = false;
+    isCloning.value = false;
+  }
 }
 
-// Modify the saveEdit function to handle both editing and cloning
-function saveEdit(updated) {
-  if (!updated.id) return;
-
-  if (isCloning.value) {
-    // If we're in cloning mode, call confirmClone instead
-    confirmClone(updated);
-    return;
+// Handle task cloning - this is called when the clone button is clicked in the modal
+async function confirmClone(cloneData) {
+  try {
+    await handleCloneTask(cloneData);
+  } catch (error) {
+    // Error is already handled in handleCloneTask
   }
+}
 
-  // Regular edit functionality
-  for (const k of columnsOrder) {
-    const i = columns[k].cards.findIndex((c) => c.id === updated.id);
-    if (i > -1) {
-      columns[k].cards[i] = {
-        ...columns[k].cards[i],
-        ...updated,
-        createdAt: columns[k].cards[i].createdAt, // Keep original creation date
-      };
-      break;
+// Handle task cloning logic
+async function handleCloneTask(cloneData) {
+  try {
+    const taskData = {
+      title: cloneData.title,
+      description: cloneData.description,
+      tags: cloneData.tags || [],
+      projectId: currentProject.value.id,
+      status: 'TODO', // Default to todo for clones
+      priority: cloneData.priority,
+      dueDate: ensureISODate(cloneData.dueDate),
+      assignedUserId: cloneData.assignedUser || null,
+    };
+
+    console.log('Creating cloned task:', taskData);
+
+    const response = await tasksAPI.create(taskData);
+    const newTask = response.data;
+
+    // Add to appropriate column (TODO by default for clones)
+    const status = newTask.status.toLowerCase();
+    if (columns[status]) {
+      columns[status].cards.unshift({
+        ...newTask,
+        assignedUser: newTask.assignedUserId,
+      });
     }
-  }
 
-  saveProjectData();
-  showToast("Task updated successfully");
-  isCloning.value = false; // Ensure cloning flag is reset
+    showToast("Task cloned successfully");
+    editing.value = false;
+    isCloning.value = false;
+  } catch (error) {
+    console.error('Error cloning task:', error);
+    showToast('Failed to clone task', 'error');
+    throw error;
+  }
 }
 
 // Helper function to find which column a card is in
@@ -1114,6 +1240,28 @@ function findCardColumn(cardId) {
   }
   return null;
 }
+
+// Helper function to format dates for input fields
+function formatDateForInput(dateString) {
+  if (!dateString) return '';
+  try {
+    const date = new Date(dateString);
+    return date.toISOString().split('T')[0];
+  } catch {
+    return '';
+  }
+}
+
+// Helper function to ensure proper date format for backend
+function ensureISODate(dateString) {
+  if (!dateString) return null;
+  try {
+    return new Date(dateString).toISOString();
+  } catch {
+    return null;
+  }
+}
+
 
 function formatDate(iso) {
   try {
@@ -1128,6 +1276,60 @@ function formatDate(iso) {
     return iso;
   }
 }
+
+// Initialize
+onMounted(async () => {
+  await loadProjects();
+  if (currentProject.value) {
+    await loadProjectData();
+  }
+});
+
+// Test auth function
+async function testAuth() {
+  console.log('🧪 Testing authentication...');
+  
+  try {
+    await initializeClerk();
+    const token = await getAuthToken();
+    console.log('✅ Auth test successful, token length:', token.length);
+    
+    // Test API call with the token
+    const testResponse = await fetch('http://localhost:3000/projects', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    console.log('🧪 Test API response:', testResponse.status, testResponse.statusText);
+    
+  } catch (error) {
+    console.error('❌ Auth test failed:', error);
+  }
+}
+
+// Initialize when component mounts
+onMounted(async () => {
+  console.log('🚀 Main component mounted');
+  
+  // Wait a bit for Clerk to initialize, then test
+  setTimeout(() => {
+    testAuth();
+  }, 1000);
+  
+  // Load projects only when Clerk is ready
+  watch(isClerkReady, async (ready) => {
+    if (ready) {
+      console.log('✅ Clerk ready, loading projects...');
+      await loadProjects();
+      if (currentProject.value) {
+        await loadProjectData();
+      }
+    }
+  });
+});
+
+
 </script>
 
 <style>
