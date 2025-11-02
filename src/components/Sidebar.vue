@@ -1,13 +1,12 @@
 <template>
   <aside
-    class="fixed left-0 top-0 h-full bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-all duration-300 z-30"
-    :class="isCollapsed ? 'w-16' : 'w-64'"
+    class="fixed left-0 top-0 h-full bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 z-30 w-52"
   >
     <!-- Sidebar Header -->
     <div
-      class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700"
+      class="flex items-center justify-center p-4 border-b border-gray-200 dark:border-gray-700"
     >
-      <div v-if="!isCollapsed" class="flex items-center gap-3">
+      <div class="flex items-center gap-3">
         <div
           class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center"
         >
@@ -26,34 +25,16 @@
           </svg>
         </div>
         <h1 class="text-lg font-semibold text-gray-800 dark:text-gray-100">
-          Kanban Board
+          Kanban
         </h1>
       </div>
-      <button
-        @click="$emit('toggle-collapse')"
-        class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300"
-      >
-        <svg
-          class="w-5 h-5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            :d="isCollapsed ? 'M13 5l7 7-7 7M5 5l7 7-7 7' : 'M11 19l-7-7 7-7m8 14l-7-7 7-7'"
-          ></path>
-        </svg>
-      </button>
     </div>
 
     <!-- Navigation -->
     <nav class="p-4 space-y-2">
       <!-- Projects Section -->
       <div>
-        <div v-if="!isCollapsed" class="flex items-center justify-between mb-3">
+        <div class="flex items-center justify-between mb-3">
           <h3
             class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider"
           >
@@ -85,7 +66,6 @@
           <button
             @click="projectDropdownOpen = !projectDropdownOpen"
             class="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 transition-colors"
-            :title="isCollapsed ? (currentProject?.name || 'Select Project') : ''"
           >
             <div
               class="w-6 h-6 bg-blue-500 rounded flex items-center justify-center flex-shrink-0"
@@ -104,17 +84,16 @@
                 ></path>
               </svg>
             </div>
-            <div v-if="!isCollapsed" class="flex-1 text-left">
-              <div class="font-medium">
+            <div class="flex-1 text-left min-w-0">
+              <div class="font-medium truncate">
                 {{ currentProject?.name || "Select Project" }}
               </div>
-              <div class="text-xs text-gray-500 dark:text-gray-400">
+              <div class="text-xs text-gray-500 dark:text-gray-400 truncate">
                 {{ projects.length }} {{ projects.length === 1 ? 'project' : 'projects' }}
               </div>
             </div>
             <svg
-              v-if="!isCollapsed"
-              class="w-4 h-4 text-gray-400 transition-transform"
+              class="w-4 h-4 text-gray-400 transition-transform flex-shrink-0"
               :class="{ 'rotate-180': projectDropdownOpen }"
               fill="none"
               stroke="currentColor"
@@ -131,7 +110,7 @@
 
           <!-- Project Dropdown Menu -->
           <div
-            v-if="projectDropdownOpen && !isCollapsed"
+            v-if="projectDropdownOpen"
             class="absolute left-0 right-0 mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-40 max-h-64 overflow-y-auto"
           >
             <div class="p-2">
@@ -208,7 +187,6 @@
 
       <!-- Quick Actions -->
       <div
-        v-if="!isCollapsed"
         class="pt-4 border-t border-gray-200 dark:border-gray-700"
       >
         <h3
@@ -371,10 +349,6 @@
 import { ref, onMounted, onBeforeUnmount } from "vue";
 
 const props = defineProps({
-  isCollapsed: {
-    type: Boolean,
-    default: false,
-  },
   currentProject: {
     type: Object,
     default: null,
@@ -386,7 +360,6 @@ const props = defineProps({
 });
 
 const emit = defineEmits([
-  "toggle-collapse",
   "project-change",
   "project-create",
   "project-delete",

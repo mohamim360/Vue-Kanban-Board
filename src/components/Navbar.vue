@@ -1,6 +1,6 @@
 <template>
   <nav
-    class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4"
+    class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-1.5"
   >
     <div class="flex items-center justify-between">
       <!-- Left side - Breadcrumb/Title -->
@@ -12,7 +12,7 @@
           v-if="currentProject"
           class="text-sm text-gray-500 dark:text-gray-400"
         >
-          {{ currentProject.taskCount || 0 }} tasks
+          <!-- {{ currentProject.taskCount || 0 }} tasks -->
         </div>
       </div>
 

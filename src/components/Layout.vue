@@ -1,9 +1,7 @@
 <template>
-  <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
+  <div class="min-h-screen bg-gray-50 dark:bg-gray-900 ">
     <!-- Sidebar -->
     <Sidebar
-      :is-collapsed="sidebarCollapsed"
-      @toggle-collapse="sidebarCollapsed = !sidebarCollapsed"
       :current-project="currentProject"
       :projects="projects"
       @project-change="handleProjectChange"
@@ -13,8 +11,7 @@
 
     <!-- Main Content Area -->
     <div
-      class="transition-all duration-300"
-      :class="sidebarCollapsed ? 'ml-16' : 'ml-64'"
+      class="ml-52"   
     >
       <!-- Navbar -->
       <Navbar 
@@ -67,7 +64,6 @@ import Navbar from "./Navbar.vue";
 import { useUser, useClerk } from "@clerk/vue";
 
 const { user } = useUser();
-const sidebarCollapsed = ref(false);
 const currentProject = ref(null);
 const clerk = useClerk();
 
