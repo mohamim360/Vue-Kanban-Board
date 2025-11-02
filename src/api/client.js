@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_URL || "https://nestjs-kanban-board.vercel.app";
+  import.meta.env.VITE_API_URL || "http://localhost:3000";
 
 console.log("API Client initialized with base URL:", API_BASE_URL);
 

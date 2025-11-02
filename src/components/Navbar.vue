@@ -6,7 +6,7 @@
       <!-- Left side - Breadcrumb/Title -->
       <div class="flex items-center gap-4">
         <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-100">
-          {{ currentProject?.name || "Select a Project" }}
+          <!-- {{ currentProject?.name || "Select a Project" }} -->
         </h2>
         <div
           v-if="currentProject"
