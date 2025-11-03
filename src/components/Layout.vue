@@ -117,7 +117,7 @@ function handleCreateFirstProject() {
 
 async function handleSignOut() {
   try {
-    await clerk.signOut();
+    await clerk.value.signOut();
     window.location.href = "/"; 
   } catch (error) {
     console.error("Error signing out:", error);
