@@ -3,14 +3,14 @@
     <!-- Mobile Sidebar Overlay -->
     <div 
       v-if="sidebarOpen" 
-      class="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
-      @click="sidebarOpen = false"
+      class="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden" 
+      @click="closeSidebar"
     ></div>
 
     <!-- Sidebar -->
     <aside
-      class="fixed left-0 top-0 h-full bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 z-30 w-52 transform transition-transform duration-300 ease-in-out lg:translate-x-0"
-      :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
+      class="fixed left-0 top-0 h-full bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 z-50 w-64 transform transition-transform duration-300 ease-in-out lg:translate-x-0"
+      :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'"
     >
       <!-- Mobile Header -->
       <div class="lg:hidden p-4 border-b border-gray-200 dark:border-gray-700">
@@ -24,7 +24,7 @@
             <h1 class="text-lg font-semibold text-gray-800 dark:text-gray-100">Kanban</h1>
           </div>
           <button 
-            @click="sidebarOpen = false"
+            @click="closeSidebar"
             class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300"
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -47,9 +47,9 @@
       </div>
 
       <!-- Navigation -->
-      <nav class="p-4 space-y-2">
+      <nav class="p-4 space-y-2" style="max-height: calc(100vh - 73px);">
         <!-- Projects Section -->
-        <div>
+        <div class="relative">
           <div class="flex items-center justify-between mb-3">
             <h3 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
               Projects
@@ -77,7 +77,7 @@
                 </svg>
               </div>
               <div class="flex-1 text-left min-w-0">
-                <div class="font-medium truncate text-sm lg:text-base">
+                <div class="font-medium truncate text-sm">
                   {{ currentProject?.name || "Select Project" }}
                 </div>
                 <div class="text-xs text-gray-500 dark:text-gray-400 truncate">
@@ -95,10 +95,10 @@
               </svg>
             </button>
 
-            <!-- Project Dropdown Menu -->
+            <!-- Project Dropdown Menu - FIXED POSITIONING -->
             <div
               v-if="projectDropdownOpen"
-              class="absolute left-0 right-0 mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-40 max-h-64 overflow-y-auto"
+              class="absolute left-0 right-0 top-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-[60] max-h-64 overflow-y-auto"
             >
               <div class="p-2">
                 <div
@@ -107,14 +107,14 @@
                 >
                   No projects yet
                 </div>
-                <div v-else>
+                <div v-else class="space-y-1">
                   <div
                     v-for="project in projects"
                     :key="project.id"
                     @click="selectProject(project)"
                     class="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer group"
                     :class="{
-                      'bg-blue-50 dark:bg-blue-900/30': currentProject?.id === project.id,
+                      'bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800': currentProject?.id === project.id,
                     }"
                   >
                     <div class="flex items-center gap-3 flex-1 min-w-0">
@@ -157,7 +157,7 @@
           <div class="space-y-1">
             <button
               @click="handleQuickAction('add-task')"
-              class="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 transition-colors text-sm lg:text-base"
+              class="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 transition-colors text-sm"
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
@@ -166,7 +166,7 @@
             </button>
             <button
               @click="handleQuickAction('view-analytics')"
-              class="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 transition-colors text-sm lg:text-base"
+              class="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 transition-colors text-sm"
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
@@ -176,105 +176,105 @@
           </div>
         </div>
       </nav>
-
-      <!-- Create Project Modal -->
-      <div
-        v-if="showCreateProjectModal"
-        class="fixed inset-0 flex items-center justify-center z-50 p-4"
-      >
-        <div
-          class="absolute inset-0 bg-black bg-opacity-40"
-          @click="showCreateProjectModal = false"
-        ></div>
-        <div
-          class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md z-50 overflow-hidden"
-        >
-          <div class="p-4 lg:p-6">
-            <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">
-              Create New Project
-            </h3>
-            <form @submit.prevent="createProject">
-              <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Project Name
-                </label>
-                <input
-                  v-model="newProjectName"
-                  type="text"
-                  required
-                  class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 dark:text-gray-100 text-sm lg:text-base"
-                  placeholder="Enter project name"
-                />
-              </div>
-              <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Description (Optional)
-                </label>
-                <textarea
-                  v-model="newProjectDescription"
-                  class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 dark:text-gray-100 text-sm lg:text-base"
-                  rows="3"
-                  placeholder="Enter project description"
-                ></textarea>
-              </div>
-              <div class="flex justify-end gap-3">
-                <button
-                  type="button"
-                  @click="showCreateProjectModal = false"
-                  class="px-3 lg:px-4 py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors text-sm lg:text-base"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  class="px-3 lg:px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm lg:text-base"
-                >
-                  Create Project
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      </div>
-
-      <!-- Delete Confirmation Modal -->
-      <div
-        v-if="showDeleteConfirmation"
-        class="fixed inset-0 flex items-center justify-center z-50 p-4"
-      >
-        <div
-          class="absolute inset-0 bg-black bg-opacity-40"
-          @click="showDeleteConfirmation = false"
-        ></div>
-        <div
-          class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md z-50 overflow-hidden"
-        >
-          <div class="p-4 lg:p-6">
-            <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">
-              Delete Project
-            </h3>
-            <p class="text-gray-600 dark:text-gray-300 text-sm lg:text-base mb-4">
-              Are you sure you want to delete "<strong>{{ projectToDelete?.name }}</strong>"? 
-              This will permanently delete all tasks in this project. This action cannot be undone.
-            </p>
-          </div>
-          <div class="bg-gray-50 dark:bg-gray-700 px-4 lg:px-6 py-4 flex justify-end gap-3">
-            <button
-              @click="showDeleteConfirmation = false"
-              class="px-3 lg:px-4 py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-colors text-sm lg:text-base"
-            >
-              Cancel
-            </button>
-            <button
-              @click="deleteProject"
-              class="px-3 lg:px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors text-sm lg:text-base"
-            >
-              Delete Project
-            </button>
-          </div>
-        </div>
-      </div>
     </aside>
+
+    <!-- Create Project Modal -->
+    <div
+      v-if="showCreateProjectModal"
+      class="fixed inset-0 flex items-center justify-center z-[60] p-4"
+    >
+      <div
+        class="absolute inset-0 bg-black bg-opacity-40"
+        @click="showCreateProjectModal = false"
+      ></div>
+      <div
+        class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md z-50 overflow-hidden"
+      >
+        <div class="p-6">
+          <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">
+            Create New Project
+          </h3>
+          <form @submit.prevent="createProject">
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Project Name
+              </label>
+              <input
+                v-model="newProjectName"
+                type="text"
+                required
+                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 dark:text-gray-100"
+                placeholder="Enter project name"
+              />
+            </div>
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Description (Optional)
+              </label>
+              <textarea
+                v-model="newProjectDescription"
+                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 dark:text-gray-100"
+                rows="3"
+                placeholder="Enter project description"
+              ></textarea>
+            </div>
+            <div class="flex justify-end gap-3">
+              <button
+                type="button"
+                @click="showCreateProjectModal = false"
+                class="px-4 py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+              >
+                Create Project
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div
+      v-if="showDeleteConfirmation"
+      class="fixed inset-0 flex items-center justify-center z-[60] p-4"
+    >
+      <div
+        class="absolute inset-0 bg-black bg-opacity-40"
+        @click="showDeleteConfirmation = false"
+      ></div>
+      <div
+        class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md z-50 overflow-hidden"
+      >
+        <div class="p-6">
+          <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">
+            Delete Project
+          </h3>
+          <p class="text-gray-600 dark:text-gray-300 mb-4">
+            Are you sure you want to delete "<strong>{{ projectToDelete?.name }}</strong>"? 
+            This will permanently delete all tasks in this project. This action cannot be undone.
+          </p>
+        </div>
+        <div class="bg-gray-50 dark:bg-gray-700 px-6 py-4 flex justify-end gap-3">
+          <button
+            @click="showDeleteConfirmation = false"
+            class="px-4 py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            @click="deleteProject"
+            class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+          >
+            Delete Project
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -297,7 +297,6 @@ const emit = defineEmits([
   "project-create",
   "project-delete",
   "quick-action",
-  "close-mobile",
 ]);
 
 // State
@@ -313,25 +312,23 @@ const newProjectDescription = ref("");
 function selectProject(project) {
   emit("project-change", project);
   projectDropdownOpen.value = false;
-  sidebarOpen.value = false; // Close sidebar on mobile when project changes
+  sidebarOpen.value = false;
 }
 
 function handleQuickAction(action) {
   emit("quick-action", action);
-  sidebarOpen.value = false; // Close sidebar on mobile for quick actions
+  sidebarOpen.value = false;
 }
 
 function createProject() {
   if (!newProjectName.value.trim()) return;
-
+  
   const newProject = {
     name: newProjectName.value.trim(),
     description: newProjectDescription.value.trim(),
   };
-
+  
   emit("project-create", newProject);
-
-  // Reset form
   newProjectName.value = "";
   newProjectDescription.value = "";
   showCreateProjectModal.value = false;
@@ -351,7 +348,10 @@ function deleteProject() {
   showDeleteConfirmation.value = false;
 }
 
-// Close dropdown when clicking outside
+function closeSidebar() {
+  sidebarOpen.value = false;
+}
+
 function handleClickOutside(event) {
   const dropdown = event.target.closest('.relative');
   if (!dropdown && projectDropdownOpen.value) {
@@ -359,7 +359,6 @@ function handleClickOutside(event) {
   }
 }
 
-// Expose methods to parent component
 defineExpose({
   openSidebar: () => sidebarOpen.value = true,
   closeSidebar: () => sidebarOpen.value = false
