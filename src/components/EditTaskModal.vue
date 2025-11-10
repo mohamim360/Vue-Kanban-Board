@@ -136,15 +136,29 @@
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Assign to User
           </label>
-          <select
-            v-model="localForm.assignedUser"
-            class="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-          >
-            <option value="">Select User</option>
-            <option v-for="user in users" :key="user.id" :value="user.id">
-              {{ user.name }} {{ user.email ? `(${user.email})` : '' }}
-            </option>
-          </select>
+          <div class="relative">
+            <select
+              v-model="localForm.assignedUser"
+              class="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+              :disabled="loadingUsers"
+            >
+              <option value="">Select User</option>
+              <option 
+                v-for="user in availableUsers" 
+                :key="user.id" 
+                :value="user.id"
+              >
+                {{ user.name }} 
+                <template v-if="user.email">({{ user.email }})</template>
+              </option>
+            </select>
+            <div v-if="loadingUsers" class="absolute right-3 top-1/2 transform -translate-y-1/2">
+              <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-600"></div>
+            </div>
+          </div>
+          <p v-if="availableUsers.length === 0 && !loadingUsers" class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            No users available
+          </p>
         </div>
       </div>
 
@@ -159,14 +173,16 @@
         <button
           v-if="isCloning"
           @click="onClone"
-          class="px-5 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white font-medium shadow transition"
+          :disabled="!isFormValid"
+          class="px-5 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white font-medium shadow transition disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Create Clone
         </button>
         <button
           v-else
           @click="onSave"
-          class="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium shadow transition"
+          :disabled="!isFormValid"
+          class="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium shadow transition disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Save Changes
         </button>
@@ -176,14 +192,17 @@
 </template>
 
 <script setup>
-import { reactive, watch, nextTick, defineProps, defineEmits, ref } from "vue";
-import TiptapEditor from "./TiptapEditor.vue"; // Make sure to import TiptapEditor
+import { reactive, watch, nextTick, ref, computed, onMounted } from "vue";
+import { useUser } from "@clerk/vue";
+import TiptapEditor from "./TiptapEditor.vue";
+import { usersAPI } from "../api/user";
+
 
 const props = defineProps({
   visible: Boolean,
   task: Object,
   isCloning: Boolean,
-  users: { // Add users prop to receive real users from parent
+  availableUsers: { // Use availableUsers prop instead of users
     type: Array,
     default: () => []
   }
@@ -191,7 +210,15 @@ const props = defineProps({
 
 const emits = defineEmits(["update:visible", "save", "clone", "error"]);
 
+// Get current user from Clerk
+const { user: currentClerkUser } = useUser();
+
+// State for users
+const loadingUsers = ref(false);
+const allUsers = ref([]);
 const newTag = ref("");
+
+// Local form state
 const localForm = reactive({
   id: "",
   title: "",
@@ -199,7 +226,18 @@ const localForm = reactive({
   tags: [],
   priority: "MEDIUM",
   dueDate: "",
-  assignedUser: "", // This will store user ID
+  assignedUser: "", // This will store Clerk user ID
+});
+
+// Computed property for available users
+const availableUsers = computed(() => {
+  // Use prop if provided, otherwise use locally fetched users
+  return props.availableUsers.length > 0 ? props.availableUsers : allUsers.value;
+});
+
+// Form validation
+const isFormValid = computed(() => {
+  return localForm.title.trim() && localForm.dueDate;
 });
 
 // Tag management functions
@@ -226,7 +264,8 @@ watch(
         tags: [...(newTask.tags || [])],
         priority: newTask.priority || "MEDIUM",
         dueDate: formatDateForInput(newTask.dueDate),
-        assignedUser: newTask.assignedUserId || "", // Use assignedUserId from backend
+        // Map assigned user - use clerkId if available, otherwise use the ID
+        assignedUser: newTask.assignedUser?.clerkId || newTask.assignedUserId || "",
       });
 
       await nextTick();
@@ -235,15 +274,50 @@ watch(
   { immediate: true, deep: true }
 );
 
-// Watch for modal visibility to reset form when closing
+// Watch for modal visibility to fetch users and reset form
 watch(
   () => props.visible,
-  (visible) => {
-    if (!visible) {
+  async (visible) => {
+    if (visible) {
+      // Fetch users if not provided via props
+      if (props.availableUsers.length === 0) {
+        await fetchUsers();
+      }
+    } else {
       newTag.value = "";
     }
   }
 );
+
+// Fetch users from backend
+async function fetchUsers() {
+  if (loadingUsers.value) return;
+  
+  try {
+    loadingUsers.value = true;
+    console.log("🔄 Fetching users for edit modal...");
+    
+    const response = await usersAPI.getAll();
+    allUsers.value = response.data || [];
+    
+    console.log(`✅ Loaded ${allUsers.value.length} users for edit modal`);
+  } catch (error) {
+    console.error("❌ Failed to fetch users for edit modal:", error);
+    
+    // Fallback: use current user only
+    if (currentClerkUser.value) {
+      allUsers.value = [{
+        id: currentClerkUser.value.id, // Clerk user ID
+        name: currentClerkUser.value.fullName || 
+              currentClerkUser.value.primaryEmailAddress?.emailAddress || 
+              'Current User',
+        email: currentClerkUser.value.primaryEmailAddress?.emailAddress,
+      }];
+    }
+  } finally {
+    loadingUsers.value = false;
+  }
+}
 
 function formatDateForInput(dateString) {
   if (!dateString) return '';
@@ -274,20 +348,28 @@ function validateForm() {
 function onSave() {
   if (!validateForm()) return;
   
-  emits("save", { 
+  const taskData = { 
     ...localForm,
-    dueDate: ensureISODate(localForm.dueDate)
-  });
+    dueDate: ensureISODate(localForm.dueDate),
+    // assignedUser remains as Clerk user ID - backend will handle mapping
+  };
+  
+  console.log("📤 Saving task with data:", taskData);
+  emits("save", taskData);
   emits("update:visible", false);
 }
 
 function onClone() {
   if (!validateForm()) return;
   
-  emits("clone", { 
+  const cloneData = { 
     ...localForm,
-    dueDate: ensureISODate(localForm.dueDate)
-  });
+    dueDate: ensureISODate(localForm.dueDate),
+    // assignedUser remains as Clerk user ID - backend will handle mapping
+  };
+  
+  console.log("📤 Cloning task with data:", cloneData);
+  emits("clone", cloneData);
   emits("update:visible", false);
 }
 

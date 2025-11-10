@@ -8,6 +8,28 @@
       @project-delete="handleProjectDelete"
     >
       <div class="text-gray-800 dark:text-gray-100">
+        <!-- Add this debug section temporarily
+<div class="mb-4 p-3 bg-purple-100 dark:bg-purple-900 rounded-lg text-sm">
+  <p class="font-semibold">User Filter Debug:</p>
+  <div class="mt-2 space-y-1 text-xs">
+    <p>Selected Filter: "{{ userFilter }}"</p>
+    <p>Available Users: {{ availableUsers.length }}</p>
+    <div v-for="user in availableUsers" :key="user.id" class="flex gap-2">
+      <span>ID: {{ user.id }}</span>
+      <span>Name: {{ user.name }}</span>
+    </div>
+    <p class="mt-2">Tasks with assigned users:</p>
+    <div v-for="column in columnsOrder" :key="column" class="ml-2">
+      <p>{{ column }}: {{ columns[column].cards.filter(c => c.assignedUser || c.assignedUserId).length }} tasks</p>
+      <div v-for="card in columns[column].cards.filter(c => c.assignedUser || c.assignedUserId)" :key="card.id" class="ml-4">
+        <span>"{{ card.title }}" - </span>
+        <span v-if="card.assignedUser">Assigned User: {{ JSON.stringify(card.assignedUser) }}</span>
+        <span v-if="card.assignedUserId">Assigned User ID: {{ card.assignedUserId }}</span>
+      </div>
+    </div>
+  </div>
+</div> -->
+
         <!-- Board Title -->
         <div class="mb-6">
           <input
@@ -88,12 +110,14 @@
                 class="w-full md:w-40 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">All Users</option>
+                <option value="unassigned">Unassigned</option>
                 <option
-                  v-for="user in demoUsers"
+                  v-for="user in availableUsers"
                   :key="user.id"
                   :value="user.id"
                 >
                   {{ user.name }}
+                  <template v-if="user.email">({{ user.email }})</template>
                 </option>
               </select>
             </div>
@@ -386,7 +410,7 @@
                     <!-- Description -->
                     <div
                       v-if="card.description"
-                      class="prose prose-sm max-w-none text-gray-600 dark:text-gray-300 dark:prose-invert mb-2 lg:mb-3 line-clamp-2  hidden"
+                      class="prose prose-sm max-w-none text-gray-600 dark:text-gray-300 dark:prose-invert mb-2 lg:mb-3 line-clamp-2 hidden"
                       v-html="card.description"
                     ></div>
 
@@ -435,14 +459,15 @@
                       </div>
 
                       <!-- Assigned User -->
-                      <div
-                        v-if="card.assignedUser"
-                        class="flex items-center gap-2"
-                      >
+                      <div class="flex items-center gap-2">
                         <!-- User badge with tooltip -->
                         <div class="relative group">
                           <span
-                            class="w-6 h-6 flex items-center justify-center rounded-full bg-indigo-500 text-white text-xs cursor-pointer"
+                            class="w-6 h-6 flex items-center justify-center rounded-full text-white text-xs cursor-pointer"
+                            :class="{
+                              'bg-indigo-500': card.assignedUser,
+                              'bg-gray-400': !card.assignedUser
+                            }"
                           >
                             {{ getUserInitials(card.assignedUser) }}
                           </span>
@@ -486,6 +511,7 @@
         <!-- Add Modal -->
         <AddTaskModal
           v-model:visible="showAddModal"
+          :available-users="availableUsers"
           @add="addNewTask"
           @error="showToast($event, 'error')"
         />
@@ -494,6 +520,7 @@
         <EditTaskModal
           v-model:visible="editing"
           :task="editForm"
+          :available-users="availableUsers"
           :is-cloning="isCloning"
           @save="saveEdit"
           @clone="confirmClone"
@@ -611,6 +638,7 @@ import {
   watch,
 } from "vue";
 import { useDark, useToggle } from "@vueuse/core";
+import { useUser } from "@clerk/vue";
 import EditTaskModal from "./components/EditTaskModal.vue";
 import AddTaskModal from "./components/AddTaskModal.vue";
 import ToastNotification from "./components/ToastNotification.vue";
@@ -619,12 +647,16 @@ import Layout from "./components/Layout.vue";
 import { useProjects } from "./composables/useProjects.js";
 import { tasksAPI } from "./api/tasks.js";
 import { useClerkAuth } from "./composables/useClerkAuth.js";
+import { usersAPI } from "./api/user.js";
 
 const isDark = useDark();
 const toggleDark = useToggle(isDark);
 
 const { isClerkReady, authError, initializeClerk, getAuthToken } =
   useClerkAuth();
+
+// Get current user from Clerk
+const { user: currentClerkUser } = useUser();
 
 // Project management
 const {
@@ -659,18 +691,62 @@ onBeforeUnmount(() => {
   document.removeEventListener("click", handleClickOutside);
 });
 
+const allUsers = ref([]);
+const loadingUsers = ref(false);
+
 // Search and filter state
 const searchQuery = ref("");
 const userFilter = ref("");
 const tagFilter = ref("");
 const sortBy = ref("priority");
 
-// Demo users (you might want to fetch these from backend)
-const demoUsers = [
-  { id: "u1", name: "Alice Johnson" },
-  { id: "u2", name: "Bob Smith" },
-  { id: "u3", name: "Charlie Davis" },
-];
+// Computed properties
+const availableUsers = computed(() => {
+  return allUsers.value;
+});
+
+const totalTasks = computed(() => {
+  return columns.todo.cards.length + columns.inprogress.cards.length + columns.done.cards.length;
+});
+
+const totalAssignedTasks = computed(() => {
+  const allCards = [...columns.todo.cards, ...columns.inprogress.cards, ...columns.done.cards];
+  return allCards.filter(card => card.assignedUser || card.assignedUserId).length;
+});
+
+// Function to fetch all users from backend
+async function fetchAllUsers() {
+  if (loadingUsers.value) return;
+
+  try {
+    loadingUsers.value = true;
+    console.log("🔄 Fetching all users from backend...");
+
+    const response = await usersAPI.getAll();
+    allUsers.value = response.data || [];
+
+    console.log(`✅ Loaded ${allUsers.value.length} users from backend:`, allUsers.value);
+  } catch (error) {
+    console.error("❌ Failed to fetch users:", error);
+    showToast("Failed to load users", "error");
+
+    // Fallback: at least show current user
+    if (currentClerkUser.value) {
+      allUsers.value = [
+        {
+          id: currentClerkUser.value.id,
+          name:
+            currentClerkUser.value.fullName ||
+            currentClerkUser.value.primaryEmailAddress?.emailAddress ||
+            "Current User",
+          email: currentClerkUser.value.primaryEmailAddress?.emailAddress,
+        },
+      ];
+    }
+  } finally {
+    loadingUsers.value = false;
+  }
+}
 
 // Compute all unique tags across all tasks
 const allTags = computed(() => {
@@ -686,63 +762,6 @@ const allTags = computed(() => {
   }
   return Array.from(tags).sort();
 });
-
-// Filter and sort cards for a column
-function filteredAndSortedCards(columnKey) {
-  let cards = [...columns[columnKey].cards];
-
-  // Apply search filter
-  if (searchQuery.value) {
-    const query = searchQuery.value.toLowerCase();
-    cards = cards.filter(
-      (card) =>
-        card.title.toLowerCase().includes(query) ||
-        (card.description && card.description.toLowerCase().includes(query)) ||
-        (card.tags &&
-          card.tags.some((tag) => tag.toLowerCase().includes(query)))
-    );
-  }
-
-  // Apply user filter
-  if (userFilter.value) {
-    cards = cards.filter((card) => card.assignedUser === userFilter.value);
-  }
-
-  // Apply tag filter
-  if (tagFilter.value) {
-    cards = cards.filter(
-      (card) => card.tags && card.tags.includes(tagFilter.value)
-    );
-  }
-
-  // Apply sorting
-  const priorityOrder = { HIGH: 3, MEDIUM: 2, LOW: 1 };
-
-  switch (sortBy.value) {
-    case "priority":
-      cards.sort(
-        (a, b) =>
-          (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0)
-      );
-      break;
-    case "dueDate":
-      cards.sort((a, b) => {
-        if (!a.dueDate && !b.dueDate) return 0;
-        if (!a.dueDate) return 1;
-        if (!b.dueDate) return -1;
-        return new Date(a.dueDate) - new Date(b.dueDate);
-      });
-      break;
-    case "createdAt":
-      cards.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-      break;
-    case "title":
-      cards.sort((a, b) => a.title.localeCompare(b.title));
-      break;
-  }
-
-  return cards;
-}
 
 // Toggle column dropdown
 function toggleColumnDropdown(col) {
@@ -803,18 +822,6 @@ async function confirmDeleteAllAction() {
   deleteAllTarget.value = null;
 }
 
-function getUserName(userId) {
-  return demoUsers.find((u) => u.id === userId)?.name || "Unknown";
-}
-
-function getUserInitials(userId) {
-  const name = getUserName(userId);
-  return name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase();
-}
 
 function formatPriority(priority) {
   const priorityMap = {
@@ -872,13 +879,126 @@ watch(currentProject, async (newProject) => {
   }
 });
 
-// Load tasks for current project
+function filteredAndSortedCards(columnKey) {
+  let cards = [...columns[columnKey].cards];
+
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase();
+    cards = cards.filter(
+      (card) =>
+        card.title.toLowerCase().includes(query) ||
+        (card.description && card.description.toLowerCase().includes(query)) ||
+        (card.tags &&
+          card.tags.some((tag) => tag.toLowerCase().includes(query)))
+    );
+  }
+
+  if (userFilter.value) {
+    if (userFilter.value === "unassigned") {
+      // Show only tasks without assigned user
+      cards = cards.filter(
+        (card) => !card.assignedUserId && !card.assignedUser
+      );
+    } else {
+      cards = cards.filter((card) => {
+        const assignedUser = card.assignedUser;
+        if (!assignedUser) return false;
+
+        const selectedUserId = userFilter.value;  
+        if (assignedUser.id === selectedUserId) return true;
+
+       
+        if (
+          assignedUser.email &&
+          assignedUser.email.includes(selectedUserId)
+        )
+          return true;
+
+     
+        const match = availableUsers.value.find(
+          (u) =>
+            u.id === selectedUserId &&
+            (u.localId === assignedUser.id ||
+              assignedUser.email?.includes(u.id))
+        );
+
+        return !!match;
+      });
+    }
+  }
+
+
+  if (tagFilter.value) {
+    cards = cards.filter(
+      (card) => card.tags && card.tags.includes(tagFilter.value)
+    );
+  }
+
+  const priorityOrder = { HIGH: 3, MEDIUM: 2, LOW: 1 };
+
+  switch (sortBy.value) {
+    case "priority":
+      cards.sort(
+        (a, b) =>
+          (priorityOrder[b.priority] || 0) -
+          (priorityOrder[a.priority] || 0)
+      );
+      break;
+    case "dueDate":
+      cards.sort((a, b) => {
+        if (!a.dueDate && !b.dueDate) return 0;
+        if (!a.dueDate) return 1;
+        if (!b.dueDate) return -1;
+        return new Date(a.dueDate) - new Date(b.dueDate);
+      });
+      break;
+    case "createdAt":
+      cards.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      break;
+    case "title":
+      cards.sort((a, b) => a.title.localeCompare(b.title));
+      break;
+  }
+
+  return cards;
+}
+
+
+
+function getUserName(assignedUser) {
+  if (!assignedUser) return "Unassigned";
+  
+
+  if (typeof assignedUser === 'object' && assignedUser !== null) {
+    return assignedUser.name || assignedUser.email || "Unknown User";
+  }
+  
+  // If assignedUser is just an ID string, find the user in availableUsers
+  const user = allUsers.value.find((u) => u.localId === assignedUser || u.id === assignedUser);
+  return user?.name || "Unknown User";
+}
+
+function getUserInitials(assignedUser) {
+  if (!assignedUser) return "NA";
+  
+  const name = getUserName(assignedUser);
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+}
+
+// Update the loadProjectData function to properly handle user data
 async function loadProjectData() {
   if (!currentProject.value) return;
 
   try {
     const response = await tasksAPI.getByProject(currentProject.value.id);
     const tasks = response.data;
+
+    console.log("📥 Loaded tasks with user data:", tasks);
 
     // Clear existing cards
     columns.todo.cards = [];
@@ -891,56 +1011,59 @@ async function loadProjectData() {
       if (columns[status]) {
         columns[status].cards.push({
           ...task,
-          // Map backend fields to frontend format
-          assignedUser: task.assignedUserId,
-          dueDate: task.dueDate,
-          createdAt: task.createdAt,
+          // Keep the assignedUser object from backend for display
+          assignedUser: task.assignedUser, // This contains the user object with name, email, etc.
+          assignedUserId: task.assignedUserId, // This is the local database ID
         });
       }
     });
 
     // Load title
     boardTitle.value = currentProject.value.name || "Project Kanban Board";
+    
+    console.log("📊 Tasks loaded into columns with user info:", {
+      todo: columns.todo.cards.length,
+      inprogress: columns.inprogress.cards.length,
+      done: columns.done.cards.length,
+      assigned: columns.todo.cards.filter(c => c.assignedUser).length + 
+                columns.inprogress.cards.filter(c => c.assignedUser).length + 
+                columns.done.cards.filter(c => c.assignedUser).length
+    });
   } catch (error) {
     console.error("Error loading project data:", error);
     showToast("Failed to load project data", "error");
   }
 }
 
-// Add new task
-async function addNewTask(task) {
-  try {
-    const taskData = {
-      title: task.title,
-      description: task.description,
-      tags: task.tags || [],
-      projectId: currentProject.value.id,
-      status: "TODO", // Default to todo
-      priority: task.priority.toUpperCase(),
-      dueDate: task.dueDate ? new Date(task.dueDate).toISOString() : null,
-      assignedUserId: task.assignedUser || null, // Map assignedUser to assignedUserId
-    };
-
-    console.log("Creating task with data:", taskData);
-
-    const response = await tasksAPI.create(taskData);
-    const newTask = response.data;
-
-    // Add to appropriate column
-    const status = newTask.status.toLowerCase();
-    if (columns[status]) {
-      columns[status].cards.unshift({
-        ...newTask,
-        assignedUser: newTask.assignedUserId, // Map back for frontend display
-      });
-    }
-
-    showToast("Task added successfully");
-  } catch (error) {
-    console.error("Error adding task:", error);
-    showToast("Failed to add task", "error");
-    throw error;
+// Update the startEdit function to handle user assignment properly
+function startEdit(card, fromColumn) {
+  console.log("Editing card with user data:", card);
+  
+  // Determine the user ID to use in the edit form
+  let assignedUserValue = "";
+  if (card.assignedUser) {
+    // Find the corresponding Clerk user ID for this assigned user
+    const user = availableUsers.value.find(u => 
+      u.localId === card.assignedUser.id || u.email === card.assignedUser.email
+    );
+    assignedUserValue = user?.id || "";
   }
+  
+  Object.assign(editForm, {
+    id: card.id,
+    title: card.title,
+    description: card.description || "",
+    tags: [...(card.tags || [])],
+    priority: card.priority,
+    dueDate: formatDateForInput(card.dueDate),
+    assignedUser: assignedUserValue, // Use Clerk user ID for the form
+  });
+
+  console.log("Edit form populated:", editForm);
+  
+  isCloning.value = false;
+  editing.value = true;
+  dropdownOpen.value = null;
 }
 
 // Project management event handlers
@@ -1081,24 +1204,8 @@ const editForm = reactive({
   assignedUser: "",
 });
 
-// Start editing a task
-function startEdit(card, fromColumn) {
-  Object.assign(editForm, {
-    id: card.id,
-    title: card.title,
-    description: card.description || "",
-    tags: [...(card.tags || [])],
-    priority: card.priority,
-    dueDate: formatDateForInput(card.dueDate),
-    assignedUser: card.assignedUser || "",
-  });
 
-  isCloning.value = false;
-  editing.value = true;
-  dropdownOpen.value = null;
-}
-
-// Clone task function
+// Clone task function 
 function cloneTask(card) {
   const currentColumn = findCardColumn(card.id);
   if (!currentColumn) return;
@@ -1132,7 +1239,7 @@ function cloneTask(card) {
     tags: [...(card.tags || [])],
     priority: card.priority,
     dueDate: formatDateForInput(card.dueDate),
-    assignedUser: card.assignedUser || "",
+    assignedUser: card.assignedUser || card.assignedUserId || "", // Use either field
   });
 
   // Set cloning mode and open the modal
@@ -1141,7 +1248,44 @@ function cloneTask(card) {
   dropdownOpen.value = null;
 }
 
-// Save edited task
+// Update addNewTask function
+async function addNewTask(task) {
+  try {
+    const taskData = {
+      title: task.title,
+      description: task.description,
+      tags: task.tags || [],
+      projectId: currentProject.value.id,
+      status: "TODO", 
+      priority: task.priority.toUpperCase(),
+      dueDate: task.dueDate ? new Date(task.dueDate).toISOString() : null,
+      assignedUserId: task.assignedUser || null, // Use assignedUser from modal
+    };
+
+    console.log("Creating task with data:", taskData);
+
+    const response = await tasksAPI.create(taskData);
+    const newTask = response.data;
+
+    // Add to appropriate column
+    const status = newTask.status.toLowerCase();
+    if (columns[status]) {
+      columns[status].cards.unshift({
+        ...newTask,
+        assignedUser: newTask.assignedUserId, // Set both fields for consistency
+        assignedUserId: newTask.assignedUserId,
+      });
+    }
+
+    showToast("Task added successfully");
+  } catch (error) {
+    console.error("Error adding task:", error);
+    showToast("Failed to add task", "error");
+    throw error;
+  }
+}
+
+// Update saveEdit function
 async function saveEdit(updatedTask) {
   try {
     if (isCloning.value) {
@@ -1157,7 +1301,7 @@ async function saveEdit(updatedTask) {
       tags: updatedTask.tags || [],
       priority: updatedTask.priority,
       dueDate: ensureISODate(updatedTask.dueDate),
-      assignedUserId: updatedTask.assignedUser || null,
+      assignedUserId: updatedTask.assignedUser || null, // Use assignedUser from modal
     };
 
     console.log("Updating task:", updatedTask.id, taskData);
@@ -1175,7 +1319,8 @@ async function saveEdit(updatedTask) {
         columns[column].cards[index] = {
           ...columns[column].cards[index],
           ...updatedTaskFromAPI,
-          assignedUser: updatedTaskFromAPI.assignedUserId,
+          assignedUser: updatedTaskFromAPI.assignedUserId, // Update both fields
+          assignedUserId: updatedTaskFromAPI.assignedUserId,
         };
         break;
       }
@@ -1191,16 +1336,7 @@ async function saveEdit(updatedTask) {
   }
 }
 
-// Handle task cloning - this is called when the clone button is clicked in the modal
-async function confirmClone(cloneData) {
-  try {
-    await handleCloneTask(cloneData);
-  } catch (error) {
-    // Error is already handled in handleCloneTask
-  }
-}
-
-// Handle task cloning logic
+// Update handleCloneTask function
 async function handleCloneTask(cloneData) {
   try {
     const taskData = {
@@ -1211,7 +1347,7 @@ async function handleCloneTask(cloneData) {
       status: "TODO", // Default to todo for clones
       priority: cloneData.priority,
       dueDate: ensureISODate(cloneData.dueDate),
-      assignedUserId: cloneData.assignedUser || null,
+      assignedUserId: cloneData.assignedUser || null, // Use assignedUser from modal
     };
 
     console.log("Creating cloned task:", taskData);
@@ -1224,7 +1360,8 @@ async function handleCloneTask(cloneData) {
     if (columns[status]) {
       columns[status].cards.unshift({
         ...newTask,
-        assignedUser: newTask.assignedUserId,
+        assignedUser: newTask.assignedUserId, // Set both fields
+        assignedUserId: newTask.assignedUserId,
       });
     }
 
@@ -1237,6 +1374,16 @@ async function handleCloneTask(cloneData) {
     throw error;
   }
 }
+
+// Handle task cloning - this is called when the clone button is clicked in the modal
+async function confirmClone(cloneData) {
+  try {
+    await handleCloneTask(cloneData);
+  } catch (error) {
+    // Error is already handled in handleCloneTask
+  }
+}
+
 
 // Helper function to find which column a card is in
 function findCardColumn(cardId) {
@@ -1283,12 +1430,26 @@ function formatDate(iso) {
   }
 }
 
-// Initialize
+// Initialize when component mounts
 onMounted(async () => {
-  await loadProjects();
-  if (currentProject.value) {
-    await loadProjectData();
-  }
+  console.log("🚀 Main component mounted");
+
+  // Wait a bit for Clerk to initialize, then test
+  setTimeout(() => {
+    testAuth();
+  }, 1000);
+
+  // Load projects and users when Clerk is ready
+  watch(isClerkReady, async (ready) => {
+    if (ready) {
+      console.log("✅ Clerk ready, loading projects and users...");
+      await loadProjects();
+      await fetchAllUsers(); // Fetch all users when Clerk is ready
+      if (currentProject.value) {
+        await loadProjectData();
+      }
+    }
+  });
 });
 
 // Test auth function
@@ -1319,27 +1480,6 @@ async function testAuth() {
     console.error("❌ Auth test failed:", error);
   }
 }
-
-// Initialize when component mounts
-onMounted(async () => {
-  console.log("🚀 Main component mounted");
-
-  // Wait a bit for Clerk to initialize, then test
-  setTimeout(() => {
-    testAuth();
-  }, 1000);
-
-  // Load projects only when Clerk is ready
-  watch(isClerkReady, async (ready) => {
-    if (ready) {
-      console.log("✅ Clerk ready, loading projects...");
-      await loadProjects();
-      if (currentProject.value) {
-        await loadProjectData();
-      }
-    }
-  });
-});
 </script>
 
 <style>
@@ -1361,4 +1501,3 @@ onMounted(async () => {
   color: #f9fafb; /* Tailwind gray-50 */
 }
 </style>
-

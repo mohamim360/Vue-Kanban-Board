@@ -108,15 +108,29 @@
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Assign to User
           </label>
-          <select
-            v-model="localForm.assignedUser"
-            class="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-          >
-            <option value="">Select User</option>
-            <option v-for="u in users" :key="u.id" :value="u.id">
-              {{ u.name }}
-            </option>
-          </select>
+          <div class="relative">
+            <select
+              v-model="localForm.assignedUser"
+              class="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+              :disabled="loadingUsers"
+            >
+              <option value="">Select User</option>
+              <option 
+                v-for="user in availableUsers" 
+                :key="user.id" 
+                :value="user.id"
+              >
+                {{ user.name }} 
+                <template v-if="user.email">({{ user.email }})</template>
+              </option>
+            </select>
+            <div v-if="loadingUsers" class="absolute right-3 top-1/2 transform -translate-y-1/2">
+              <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-600"></div>
+            </div>
+          </div>
+          <p v-if="availableUsers.length === 0 && !loadingUsers" class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            No users available
+          </p>
         </div>
       </div>
 
@@ -130,7 +144,8 @@
         </button>
         <button
           @click="onAdd"
-          class="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium shadow transition"
+          :disabled="!isFormValid"
+          class="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium shadow transition disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Save Task
         </button>
@@ -140,19 +155,30 @@
 </template>
 
 <script setup>
-import { reactive, watch } from "vue";
+import { reactive, watch, computed, ref, onMounted } from "vue";
+import { useUser } from "@clerk/vue";
 import TiptapEditor from "./TiptapEditor.vue";
 import TagInput from "./TagInput.vue";
+import { usersAPI } from "../api/user";
 
-const props = defineProps({ visible: Boolean });
+const props = defineProps({ 
+  visible: Boolean,
+  availableUsers: {
+    type: Array,
+    default: () => []
+  }
+});
+
 const emits = defineEmits(["update:visible", "add", "error"]);
 
-const users = [
-  { id: "u1", name: "Alice Johnson" },
-  { id: "u2", name: "Bob Smith" },
-  { id: "u3", name: "Charlie Davis" },
-];
+// Get current user from Clerk
+const { user: currentClerkUser } = useUser();
 
+// State for users
+const loadingUsers = ref(false);
+const allUsers = ref([]);
+
+// Local form state
 const localForm = reactive({
   title: "",
   description: "",
@@ -162,19 +188,67 @@ const localForm = reactive({
   assignedUser: "",
 });
 
+// Computed property for available users
+const availableUsers = computed(() => {
+  // Use prop if provided, otherwise use locally fetched users
+  return props.availableUsers.length > 0 ? props.availableUsers : allUsers.value;
+});
+
+// Form validation
+const isFormValid = computed(() => {
+  return localForm.title.trim() && localForm.dueDate;
+});
+
+// Fetch users from backend when modal opens
 watch(
   () => props.visible,
-  (val) => {
+  async (val) => {
     if (val) {
+      // Reset form
       localForm.title = "";
       localForm.description = "";
       localForm.tags = [];
       localForm.priority = "Medium";
       localForm.dueDate = "";
       localForm.assignedUser = "";
+      
+      // Fetch users if not provided via props
+      if (props.availableUsers.length === 0) {
+        await fetchUsers();
+      }
     }
   }
 );
+
+// Fetch users from backend
+async function fetchUsers() {
+  if (loadingUsers.value) return;
+  
+  try {
+    loadingUsers.value = true;
+    console.log("🔄 Fetching users for modal...");
+    
+    const response = await usersAPI.getAll();
+    allUsers.value = response.data || [];
+    
+    console.log(`✅ Loaded ${allUsers.value.length} users for modal`);
+  } catch (error) {
+    console.error("❌ Failed to fetch users for modal:", error);
+    
+    // Fallback: use current user only
+    if (currentClerkUser.value) {
+      allUsers.value = [{
+        id: currentClerkUser.value.id,
+        name: currentClerkUser.value.fullName || 
+              currentClerkUser.value.primaryEmailAddress?.emailAddress || 
+              'Current User',
+        email: currentClerkUser.value.primaryEmailAddress?.emailAddress,
+      }];
+    }
+  } finally {
+    loadingUsers.value = false;
+  }
+}
 
 function onCancel() {
   emits("update:visible", false);
@@ -189,7 +263,14 @@ function onAdd() {
     emits("error", "Due date is required");
     return;
   }
-  emits("add", { ...localForm });
+  
+  
+  const taskData = {
+    ...localForm,
+    priority: localForm.priority.toUpperCase() 
+  };
+  
+  emits("add", taskData);
   emits("update:visible", false);
 }
 </script>
