@@ -17,14 +17,17 @@
     <div v-for="user in availableUsers" :key="user.id" class="flex gap-2">
       <span>ID: {{ user.id }}</span>
       <span>Name: {{ user.name }}</span>
+      <span>Email: {{ user.email }}</span>
+      <span v-if="user.localId">LocalID: {{ user.localId }}</span>
     </div>
     <p class="mt-2">Tasks with assigned users:</p>
     <div v-for="column in columnsOrder" :key="column" class="ml-2">
       <p>{{ column }}: {{ columns[column].cards.filter(c => c.assignedUser || c.assignedUserId).length }} tasks</p>
       <div v-for="card in columns[column].cards.filter(c => c.assignedUser || c.assignedUserId)" :key="card.id" class="ml-4">
         <span>"{{ card.title }}" - </span>
-        <span v-if="card.assignedUser">Assigned User: {{ JSON.stringify(card.assignedUser) }}</span>
-        <span v-if="card.assignedUserId">Assigned User ID: {{ card.assignedUserId }}</span>
+        <span>Display Name: "{{ getUserName(card.assignedUser) }}"</span>
+        <span v-if="card.assignedUser"> | Backend User: {{ JSON.stringify(card.assignedUser) }}</span>
+        <span v-if="card.assignedUserId"> | User ID: {{ card.assignedUserId }}</span>
       </div>
     </div>
   </div>
@@ -460,25 +463,45 @@
 
                       <!-- Assigned User -->
                       <div class="flex items-center gap-2">
-                        <!-- User badge with tooltip -->
+                        <!-- User badge with enhanced tooltip -->
                         <div class="relative group">
                           <span
-                            class="w-6 h-6 flex items-center justify-center rounded-full text-white text-xs cursor-pointer"
+                            class="w-6 h-6 flex items-center justify-center rounded-full text-white text-xs cursor-pointer font-medium"
                             :class="{
                               'bg-indigo-500': card.assignedUser,
-                              'bg-gray-400': !card.assignedUser
+                              'bg-gray-400': !card.assignedUser,
                             }"
                           >
                             {{ getUserInitials(card.assignedUser) }}
                           </span>
 
-                          <!-- Tooltip -->
+                          <!-- Enhanced Tooltip -->
                           <div
-                            class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs bg-gray-800 dark:bg-gray-100 text-white dark:text-gray-800 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10"
+                            class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 text-sm bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10 min-w-[120px] text-center"
                           >
-                            {{ getUserName(card.assignedUser) }}
+                            <div class="font-semibold">
+                              {{ getUserName(card.assignedUser) }}
+                            </div>
                             <div
-                              class="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-800 dark:border-t-gray-100"
+                              v-if="
+                                card.assignedUser &&
+                                card.assignedUser.email &&
+                                !card.assignedUser.email.includes(
+                                  '@example.com'
+                                )
+                              "
+                              class="text-xs text-gray-300 dark:text-gray-600 mt-1"
+                            >
+                              {{ card.assignedUser.email }}
+                            </div>
+                            <div
+                              v-else-if="getUserEmail(card.assignedUser)"
+                              class="text-xs text-gray-300 dark:text-gray-600 mt-1"
+                            >
+                              {{ getUserEmail(card.assignedUser) }}
+                            </div>
+                            <div
+                              class="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900 dark:border-t-gray-100"
                             ></div>
                           </div>
                         </div>
@@ -706,12 +729,21 @@ const availableUsers = computed(() => {
 });
 
 const totalTasks = computed(() => {
-  return columns.todo.cards.length + columns.inprogress.cards.length + columns.done.cards.length;
+  return (
+    columns.todo.cards.length +
+    columns.inprogress.cards.length +
+    columns.done.cards.length
+  );
 });
 
 const totalAssignedTasks = computed(() => {
-  const allCards = [...columns.todo.cards, ...columns.inprogress.cards, ...columns.done.cards];
-  return allCards.filter(card => card.assignedUser || card.assignedUserId).length;
+  const allCards = [
+    ...columns.todo.cards,
+    ...columns.inprogress.cards,
+    ...columns.done.cards,
+  ];
+  return allCards.filter((card) => card.assignedUser || card.assignedUserId)
+    .length;
 });
 
 // Function to fetch all users from backend
@@ -723,9 +755,21 @@ async function fetchAllUsers() {
     console.log("🔄 Fetching all users from backend...");
 
     const response = await usersAPI.getAll();
-    allUsers.value = response.data || [];
+    const usersFromBackend = response.data || [];
 
-    console.log(`✅ Loaded ${allUsers.value.length} users from backend:`, allUsers.value);
+    // Ensure consistent data structure
+    allUsers.value = usersFromBackend.map((user) => ({
+      id: user.id || user.clerkId, // Use id or clerkId as primary ID
+      localId: user.localId || user.id, // Map localId properly
+      name: user.name,
+      email: user.email,
+      clerkId: user.clerkId || user.id, // Ensure clerkId is set
+    }));
+
+    console.log(
+      `✅ Loaded ${allUsers.value.length} users from backend:`,
+      allUsers.value
+    );
   } catch (error) {
     console.error("❌ Failed to fetch users:", error);
     showToast("Failed to load users", "error");
@@ -735,11 +779,13 @@ async function fetchAllUsers() {
       allUsers.value = [
         {
           id: currentClerkUser.value.id,
+          localId: currentClerkUser.value.id,
           name:
             currentClerkUser.value.fullName ||
             currentClerkUser.value.primaryEmailAddress?.emailAddress ||
             "Current User",
           email: currentClerkUser.value.primaryEmailAddress?.emailAddress,
+          clerkId: currentClerkUser.value.id,
         },
       ];
     }
@@ -822,7 +868,6 @@ async function confirmDeleteAllAction() {
   deleteAllTarget.value = null;
 }
 
-
 function formatPriority(priority) {
   const priorityMap = {
     HIGH: "High",
@@ -901,32 +946,58 @@ function filteredAndSortedCards(columnKey) {
       );
     } else {
       cards = cards.filter((card) => {
-        const assignedUser = card.assignedUser;
-        if (!assignedUser) return false;
+        const selectedUserId = userFilter.value;
 
-        const selectedUserId = userFilter.value;  
-        if (assignedUser.id === selectedUserId) return true;
+        // If no assigned user, skip
+        if (!card.assignedUser && !card.assignedUserId) return false;
 
-       
-        if (
-          assignedUser.email &&
-          assignedUser.email.includes(selectedUserId)
-        )
+        // Case 1: Check if assignedUser object has matching Clerk ID
+        if (card.assignedUser && card.assignedUser.clerkId === selectedUserId) {
           return true;
+        }
 
-     
-        const match = availableUsers.value.find(
-          (u) =>
-            u.id === selectedUserId &&
-            (u.localId === assignedUser.id ||
-              assignedUser.email?.includes(u.id))
+        // Case 2: Check if assignedUser email matches selected user's email
+        const selectedUser = availableUsers.value.find(
+          (user) => user.id === selectedUserId
         );
 
-        return !!match;
+        if (selectedUser && card.assignedUser && card.assignedUser.email) {
+          // Direct email comparison
+          if (card.assignedUser.email === selectedUser.email) {
+            return true;
+          }
+
+          // Handle example email format (user_xxx@example.com)
+          if (card.assignedUser.email.includes("@example.com")) {
+            const emailMatch = card.assignedUser.email.match(
+              /user_([^@]+)@example\.com/
+            );
+            if (emailMatch) {
+              const clerkIdFromEmail = `user_${emailMatch[1]}`;
+              if (clerkIdFromEmail === selectedUser.id) {
+                return true;
+              }
+            }
+          }
+        }
+
+        // Case 3: Check if we can match by localId (if available)
+        if (selectedUser && selectedUser.localId) {
+          if (
+            card.assignedUser &&
+            card.assignedUser.id === selectedUser.localId
+          ) {
+            return true;
+          }
+          if (card.assignedUserId === selectedUser.localId) {
+            return true;
+          }
+        }
+
+        return false;
       });
     }
   }
-
 
   if (tagFilter.value) {
     cards = cards.filter(
@@ -940,8 +1011,7 @@ function filteredAndSortedCards(columnKey) {
     case "priority":
       cards.sort(
         (a, b) =>
-          (priorityOrder[b.priority] || 0) -
-          (priorityOrder[a.priority] || 0)
+          (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0)
       );
       break;
     case "dueDate":
@@ -963,33 +1033,113 @@ function filteredAndSortedCards(columnKey) {
   return cards;
 }
 
+function getUserInfo(assignedUser) {
+  if (!assignedUser) return { name: "Unassigned", email: null };
 
+  let name = "Unknown User";
+  let email = null;
 
-function getUserName(assignedUser) {
-  if (!assignedUser) return "Unassigned";
-  
+  if (typeof assignedUser === "object" && assignedUser !== null) {
+    // Try to find the real user from availableUsers
+    let realUser = null;
 
-  if (typeof assignedUser === 'object' && assignedUser !== null) {
-    return assignedUser.name || assignedUser.email || "Unknown User";
+    // First try by clerkId
+    if (assignedUser.clerkId) {
+      realUser = availableUsers.value.find(
+        (u) => u.id === assignedUser.clerkId
+      );
+    }
+
+    // If not found, try by email
+    if (!realUser && assignedUser.email) {
+      realUser = availableUsers.value.find((u) => {
+        if (u.email === assignedUser.email) return true;
+
+        // Handle example email format
+        if (assignedUser.email.includes("@example.com")) {
+          const emailMatch = assignedUser.email.match(
+            /user_([^@]+)@example\.com/
+          );
+          if (emailMatch) {
+            const clerkIdFromEmail = `user_${emailMatch[1]}`;
+            return u.id === clerkIdFromEmail;
+          }
+        }
+        return false;
+      });
+    }
+
+    // If we found a real user, use their data
+    if (realUser) {
+      name = realUser.name;
+      email = realUser.email;
+    } else {
+      // Fallback to assignedUser data
+      name =
+        assignedUser.name && assignedUser.name !== "User"
+          ? assignedUser.name
+          : "Unknown User";
+
+      email =
+        assignedUser.email && !assignedUser.email.includes("@example.com")
+          ? assignedUser.email
+          : null;
+
+      // If it's an example email, show a friendly identifier
+      if (assignedUser.email && assignedUser.email.includes("@example.com")) {
+        const emailMatch = assignedUser.email.match(
+          /user_([^@]+)@example\.com/
+        );
+        if (emailMatch) {
+          const clerkId = `user_${emailMatch[1]}`;
+          name = `User (${clerkId.substring(0, 8)}...)`;
+        }
+      }
+    }
+  } else {
+    // If assignedUser is just an ID string, find the user
+    const user = availableUsers.value.find(
+      (u) => u.localId === assignedUser || u.id === assignedUser
+    );
+    if (user) {
+      name = user.name;
+      email = user.email;
+    }
   }
-  
-  // If assignedUser is just an ID string, find the user in availableUsers
-  const user = allUsers.value.find((u) => u.localId === assignedUser || u.id === assignedUser);
-  return user?.name || "Unknown User";
+
+  return { name, email };
+}
+
+// Update the existing functions to use the combined approach
+function getUserName(assignedUser) {
+  return getUserInfo(assignedUser).name;
+}
+
+function getUserEmail(assignedUser) {
+  return getUserInfo(assignedUser).email;
 }
 
 function getUserInitials(assignedUser) {
-  if (!assignedUser) return "NA";
-  
   const name = getUserName(assignedUser);
-  return name
+
+  const initials = name
     .split(" ")
     .map((n) => n[0])
     .join("")
     .toUpperCase()
     .slice(0, 2);
-}
 
+  if (initials && !["US", "UN", "NA"].includes(initials)) {
+    return initials;
+  }
+
+  // Fallback
+  if (typeof assignedUser === "object" && assignedUser.email) {
+    return assignedUser.email.substring(0, 2).toUpperCase();
+  }
+
+  return "NA";
+}
 // Update the loadProjectData function to properly handle user data
 async function loadProjectData() {
   if (!currentProject.value) return;
@@ -1020,14 +1170,15 @@ async function loadProjectData() {
 
     // Load title
     boardTitle.value = currentProject.value.name || "Project Kanban Board";
-    
+
     console.log("📊 Tasks loaded into columns with user info:", {
       todo: columns.todo.cards.length,
       inprogress: columns.inprogress.cards.length,
       done: columns.done.cards.length,
-      assigned: columns.todo.cards.filter(c => c.assignedUser).length + 
-                columns.inprogress.cards.filter(c => c.assignedUser).length + 
-                columns.done.cards.filter(c => c.assignedUser).length
+      assigned:
+        columns.todo.cards.filter((c) => c.assignedUser).length +
+        columns.inprogress.cards.filter((c) => c.assignedUser).length +
+        columns.done.cards.filter((c) => c.assignedUser).length,
     });
   } catch (error) {
     console.error("Error loading project data:", error);
@@ -1035,20 +1186,95 @@ async function loadProjectData() {
   }
 }
 
+// Add this computed property for debugging
+const debugUserData = computed(() => {
+  return {
+    availableUsers: availableUsers.value,
+    userFilter: userFilter.value,
+    tasksWithUsers: columnsOrder.flatMap((column) =>
+      columns[column].cards
+        .filter((card) => card.assignedUser || card.assignedUserId)
+        .map((card) => ({
+          title: card.title,
+          assignedUser: card.assignedUser,
+          assignedUserId: card.assignedUserId,
+          column: column,
+        }))
+    ),
+  };
+});
+
+// Log this when data changes
+watch(
+  debugUserData,
+  (newData) => {
+    console.log("🔍 User Filter Debug:", newData);
+  },
+  { deep: true, immediate: true }
+);
+
 // Update the startEdit function to handle user assignment properly
 function startEdit(card, fromColumn) {
-  console.log("Editing card with user data:", card);
-  
-  // Determine the user ID to use in the edit form
+  console.log("🔄 Starting edit for card:", card);
+
   let assignedUserValue = "";
-  if (card.assignedUser) {
-    // Find the corresponding Clerk user ID for this assigned user
-    const user = availableUsers.value.find(u => 
-      u.localId === card.assignedUser.id || u.email === card.assignedUser.email
-    );
-    assignedUserValue = user?.id || "";
+
+  if (card.assignedUser || card.assignedUserId) {
+    console.log("🔍 Resolving assigned user...");
+    
+    // Case 1: If assignedUser has clerkId, use it directly
+    if (card.assignedUser && card.assignedUser.clerkId) {
+      assignedUserValue = card.assignedUser.clerkId;
+      console.log("✅ Using clerkId from assignedUser:", assignedUserValue);
+    } 
+    // Case 2: If assignedUser has example email, extract Clerk ID from it
+    else if (card.assignedUser && card.assignedUser.email && card.assignedUser.email.includes('@example.com')) {
+      console.log("🔍 Found example email:", card.assignedUser.email);
+      
+      // Extract Clerk ID from example email format: user_XXX@example.com
+      const emailMatch = card.assignedUser.email.match(/user_([^@]+)@example\.com/);
+      if (emailMatch) {
+        const clerkIdFromEmail = `user_${emailMatch[1]}`;
+        console.log("🔍 Extracted Clerk ID from email:", clerkIdFromEmail);
+        
+        // Verify this user exists in availableUsers
+        const userExists = availableUsers.value.find(u => u.id === clerkIdFromEmail);
+        if (userExists) {
+          assignedUserValue = clerkIdFromEmail;
+          console.log("✅ Found matching user:", assignedUserValue);
+        } else {
+          console.log("❌ No user found with extracted Clerk ID");
+        }
+      }
+    }
+    // Case 3: Try to find by local database ID
+    else if (card.assignedUserId) {
+      console.log("🔍 Looking for user by local ID:", card.assignedUserId);
+      
+      const user = availableUsers.value.find(u => u.localId === card.assignedUserId);
+      if (user) {
+        assignedUserValue = user.id;
+        console.log("✅ Found user by localId:", assignedUserValue);
+      } else {
+        console.log("❌ No user found by localId");
+      }
+    }
+    // Case 4: Try direct email match (fallback)
+    else if (card.assignedUser && card.assignedUser.email) {
+      console.log("🔍 Trying direct email match:", card.assignedUser.email);
+      
+      const user = availableUsers.value.find(u => u.email === card.assignedUser.email);
+      if (user) {
+        assignedUserValue = user.id;
+        console.log("✅ Found user by direct email match:", assignedUserValue);
+      } else {
+        console.log("❌ No user found by direct email match");
+      }
+    }
+  } else {
+    console.log("ℹ️ No assigned user for this task");
   }
-  
+
   Object.assign(editForm, {
     id: card.id,
     title: card.title,
@@ -1056,11 +1282,20 @@ function startEdit(card, fromColumn) {
     tags: [...(card.tags || [])],
     priority: card.priority,
     dueDate: formatDateForInput(card.dueDate),
-    assignedUser: assignedUserValue, // Use Clerk user ID for the form
+    assignedUser: assignedUserValue,
+    // Also pass the original assignedUser object for debugging
+    originalAssignedUser: card.assignedUser,
+    originalAssignedUserId: card.assignedUserId
   });
 
-  console.log("Edit form populated:", editForm);
-  
+  console.log("✅ Edit form populated:", {
+    assignedUser: editForm.assignedUser,
+    originalData: {
+      assignedUser: card.assignedUser,
+      assignedUserId: card.assignedUserId
+    }
+  });
+
   isCloning.value = false;
   editing.value = true;
   dropdownOpen.value = null;
@@ -1093,6 +1328,18 @@ function onDragStart(e, cardId, fromColumn) {
 function onDragEnd(e) {
   e.target.classList.remove("opacity-30");
 }
+
+// Load project data when current project changes
+watch(currentProject, async (newProject) => {
+  if (newProject) {
+    // Reset filters when loading new project
+    userFilter.value = "";
+    tagFilter.value = "";
+    searchQuery.value = "";
+
+    await loadProjectData();
+  }
+});
 
 async function onDrop(e, toColumn) {
   e.preventDefault();
@@ -1205,10 +1452,198 @@ const editForm = reactive({
 });
 
 
-// Clone task function 
+
+// Update addNewTask function
+// Update addNewTask function
+async function addNewTask(task) {
+  try {
+    const taskData = {
+      title: task.title,
+      description: task.description,
+      tags: task.tags || [],
+      projectId: currentProject.value.id,
+      status: "TODO",
+      priority: task.priority.toUpperCase(),
+      dueDate: task.dueDate ? new Date(task.dueDate).toISOString() : null,
+      assignedUserId: task.assignedUser || null, // This should be Clerk ID
+    };
+
+    console.log("Creating task with data:", taskData);
+
+    const response = await tasksAPI.create(taskData);
+    const newTask = response.data;
+
+    // Add to appropriate column
+    const status = newTask.status.toLowerCase();
+    if (columns[status]) {
+      columns[status].cards.unshift({
+        ...newTask,
+        assignedUser: newTask.assignedUser, // Use the assignedUser object from backend
+        assignedUserId: newTask.assignedUserId,
+      });
+    }
+
+    showToast("Task added successfully");
+  } catch (error) {
+    console.error("Error adding task:", error);
+    showToast("Failed to add task", "error");
+    throw error;
+  }
+}
+
+// Update saveEdit function
+async function saveEdit(updatedTask) {
+  try {
+    if (isCloning.value) {
+      await handleCloneTask(updatedTask);
+      return;
+    }
+
+    const taskData = {
+      title: updatedTask.title,
+      description: updatedTask.description,
+      tags: updatedTask.tags || [],
+      priority: updatedTask.priority,
+      dueDate: ensureISODate(updatedTask.dueDate),
+      assignedUserId: updatedTask.assignedUser || null, // This should be Clerk ID
+    };
+
+    console.log("Updating task:", updatedTask.id, taskData);
+
+    const response = await tasksAPI.update(updatedTask.id, taskData);
+    const updatedTaskFromAPI = response.data;
+
+    // Update local state
+    for (const column of columnsOrder) {
+      const index = columns[column].cards.findIndex(
+        (c) => c.id === updatedTask.id
+      );
+      if (index > -1) {
+        columns[column].cards[index] = {
+          ...columns[column].cards[index],
+          ...updatedTaskFromAPI,
+          assignedUser: updatedTaskFromAPI.assignedUser,
+          assignedUserId: updatedTaskFromAPI.assignedUserId,
+        };
+        break;
+      }
+    }
+
+    showToast("Task updated successfully");
+  } catch (error) {
+    console.error("Error updating task:", error);
+    showToast("Failed to update task", "error");
+  } finally {
+    editing.value = false;
+    isCloning.value = false;
+  }
+}
+
+// Update handleCloneTask function
+async function handleCloneTask(cloneData) {
+  try {
+    const taskData = {
+      title: cloneData.title,
+      description: cloneData.description,
+      tags: cloneData.tags || [],
+      projectId: currentProject.value.id,
+      status: "TODO", // Default to todo for clones
+      priority: cloneData.priority,
+      dueDate: ensureISODate(cloneData.dueDate),
+      assignedUserId: cloneData.assignedUser || null, // This should be Clerk ID
+    };
+
+    console.log("🔄 Creating cloned task with data:", taskData);
+
+    const response = await tasksAPI.create(taskData);
+    const newTask = response.data;
+
+    console.log("✅ Cloned task created:", newTask);
+
+    // Add to appropriate column (TODO by default for clones)
+    const status = newTask.status.toLowerCase();
+    if (columns[status]) {
+      columns[status].cards.unshift({
+        ...newTask,
+        assignedUser: newTask.assignedUser, // Use the assignedUser object from backend
+        assignedUserId: newTask.assignedUserId,
+      });
+    }
+
+    showToast("Task cloned successfully");
+    editing.value = false;
+    isCloning.value = false;
+  } catch (error) {
+    console.error("❌ Error cloning task:", error);
+    showToast("Failed to clone task", "error");
+    throw error;
+  }
+}
+
+// Update cloneTask function to properly handle user assignment
 function cloneTask(card) {
   const currentColumn = findCardColumn(card.id);
   if (!currentColumn) return;
+
+  console.log("🔄 Starting clone for card:", card);
+
+  let assignedUserValue = "";
+
+  if (card.assignedUser || card.assignedUserId) {
+    console.log("🔍 Resolving assigned user for clone...");
+    
+    // Case 1: If assignedUser has clerkId, use it directly
+    if (card.assignedUser && card.assignedUser.clerkId) {
+      assignedUserValue = card.assignedUser.clerkId;
+      console.log("✅ Using clerkId from assignedUser:", assignedUserValue);
+    } 
+    // Case 2: If assignedUser has example email, extract Clerk ID from it
+    else if (card.assignedUser && card.assignedUser.email && card.assignedUser.email.includes('@example.com')) {
+      console.log("🔍 Found example email:", card.assignedUser.email);
+      
+      // Extract Clerk ID from example email format: user_XXX@example.com
+      const emailMatch = card.assignedUser.email.match(/user_([^@]+)@example\.com/);
+      if (emailMatch) {
+        const clerkIdFromEmail = `user_${emailMatch[1]}`;
+        console.log("🔍 Extracted Clerk ID from email:", clerkIdFromEmail);
+        
+        // Verify this user exists in availableUsers
+        const userExists = availableUsers.value.find(u => u.id === clerkIdFromEmail);
+        if (userExists) {
+          assignedUserValue = clerkIdFromEmail;
+          console.log("✅ Found matching user for clone:", assignedUserValue);
+        } else {
+          console.log("❌ No user found with extracted Clerk ID for clone");
+        }
+      }
+    }
+    // Case 3: Try to find by local database ID
+    else if (card.assignedUserId) {
+      console.log("🔍 Looking for user by local ID for clone:", card.assignedUserId);
+      
+      const user = availableUsers.value.find(u => u.localId === card.assignedUserId);
+      if (user) {
+        assignedUserValue = user.id;
+        console.log("✅ Found user by localId for clone:", assignedUserValue);
+      } else {
+        console.log("❌ No user found by localId for clone");
+      }
+    }
+    // Case 4: Try direct email match (fallback)
+    else if (card.assignedUser && card.assignedUser.email) {
+      console.log("🔍 Trying direct email match for clone:", card.assignedUser.email);
+      
+      const user = availableUsers.value.find(u => u.email === card.assignedUser.email);
+      if (user) {
+        assignedUserValue = user.id;
+        console.log("✅ Found user by direct email match for clone:", assignedUserValue);
+      } else {
+        console.log("❌ No user found by direct email match for clone");
+      }
+    }
+  } else {
+    console.log("ℹ️ No assigned user for this task to clone");
+  }
 
   // Generate a suggested title for the clone
   const existingCopies = columns[currentColumn].cards.filter((c) => {
@@ -1239,7 +1674,18 @@ function cloneTask(card) {
     tags: [...(card.tags || [])],
     priority: card.priority,
     dueDate: formatDateForInput(card.dueDate),
-    assignedUser: card.assignedUser || card.assignedUserId || "", // Use either field
+    assignedUser: assignedUserValue, // Use the resolved Clerk ID
+    // Also pass the original data for debugging
+    originalAssignedUser: card.assignedUser,
+    originalAssignedUserId: card.assignedUserId
+  });
+
+  console.log("✅ Clone form populated:", {
+    assignedUser: editForm.assignedUser,
+    originalData: {
+      assignedUser: card.assignedUser,
+      assignedUserId: card.assignedUserId
+    }
   });
 
   // Set cloning mode and open the modal
@@ -1248,143 +1694,16 @@ function cloneTask(card) {
   dropdownOpen.value = null;
 }
 
-// Update addNewTask function
-async function addNewTask(task) {
-  try {
-    const taskData = {
-      title: task.title,
-      description: task.description,
-      tags: task.tags || [],
-      projectId: currentProject.value.id,
-      status: "TODO", 
-      priority: task.priority.toUpperCase(),
-      dueDate: task.dueDate ? new Date(task.dueDate).toISOString() : null,
-      assignedUserId: task.assignedUser || null, // Use assignedUser from modal
-    };
-
-    console.log("Creating task with data:", taskData);
-
-    const response = await tasksAPI.create(taskData);
-    const newTask = response.data;
-
-    // Add to appropriate column
-    const status = newTask.status.toLowerCase();
-    if (columns[status]) {
-      columns[status].cards.unshift({
-        ...newTask,
-        assignedUser: newTask.assignedUserId, // Set both fields for consistency
-        assignedUserId: newTask.assignedUserId,
-      });
-    }
-
-    showToast("Task added successfully");
-  } catch (error) {
-    console.error("Error adding task:", error);
-    showToast("Failed to add task", "error");
-    throw error;
-  }
-}
-
-// Update saveEdit function
-async function saveEdit(updatedTask) {
-  try {
-    if (isCloning.value) {
-      // If we're in cloning mode, create a new task
-      await handleCloneTask(updatedTask);
-      return;
-    }
-
-    // Regular edit functionality
-    const taskData = {
-      title: updatedTask.title,
-      description: updatedTask.description,
-      tags: updatedTask.tags || [],
-      priority: updatedTask.priority,
-      dueDate: ensureISODate(updatedTask.dueDate),
-      assignedUserId: updatedTask.assignedUser || null, // Use assignedUser from modal
-    };
-
-    console.log("Updating task:", updatedTask.id, taskData);
-
-    // Update in backend
-    const response = await tasksAPI.update(updatedTask.id, taskData);
-    const updatedTaskFromAPI = response.data;
-
-    // Update local state
-    for (const column of columnsOrder) {
-      const index = columns[column].cards.findIndex(
-        (c) => c.id === updatedTask.id
-      );
-      if (index > -1) {
-        columns[column].cards[index] = {
-          ...columns[column].cards[index],
-          ...updatedTaskFromAPI,
-          assignedUser: updatedTaskFromAPI.assignedUserId, // Update both fields
-          assignedUserId: updatedTaskFromAPI.assignedUserId,
-        };
-        break;
-      }
-    }
-
-    showToast("Task updated successfully");
-  } catch (error) {
-    console.error("Error updating task:", error);
-    showToast("Failed to update task", "error");
-  } finally {
-    editing.value = false;
-    isCloning.value = false;
-  }
-}
-
-// Update handleCloneTask function
-async function handleCloneTask(cloneData) {
-  try {
-    const taskData = {
-      title: cloneData.title,
-      description: cloneData.description,
-      tags: cloneData.tags || [],
-      projectId: currentProject.value.id,
-      status: "TODO", // Default to todo for clones
-      priority: cloneData.priority,
-      dueDate: ensureISODate(cloneData.dueDate),
-      assignedUserId: cloneData.assignedUser || null, // Use assignedUser from modal
-    };
-
-    console.log("Creating cloned task:", taskData);
-
-    const response = await tasksAPI.create(taskData);
-    const newTask = response.data;
-
-    // Add to appropriate column (TODO by default for clones)
-    const status = newTask.status.toLowerCase();
-    if (columns[status]) {
-      columns[status].cards.unshift({
-        ...newTask,
-        assignedUser: newTask.assignedUserId, // Set both fields
-        assignedUserId: newTask.assignedUserId,
-      });
-    }
-
-    showToast("Task cloned successfully");
-    editing.value = false;
-    isCloning.value = false;
-  } catch (error) {
-    console.error("Error cloning task:", error);
-    showToast("Failed to clone task", "error");
-    throw error;
-  }
-}
-
 // Handle task cloning - this is called when the clone button is clicked in the modal
 async function confirmClone(cloneData) {
   try {
+    console.log("🔄 Confirming clone with data:", cloneData);
     await handleCloneTask(cloneData);
   } catch (error) {
+    console.error("❌ Error in confirmClone:", error);
     // Error is already handled in handleCloneTask
   }
 }
-
-
 // Helper function to find which column a card is in
 function findCardColumn(cardId) {
   for (const column of columnsOrder) {
@@ -1460,17 +1779,14 @@ async function testAuth() {
     await initializeClerk();
     const token = await getAuthToken();
     console.log("✅ Auth test successful, token length:", token.length);
-
+    const API_BASE_URL = import.meta.env.VITE_API_URL;
     // Test API call with the token
-    const testResponse = await fetch(
-      "https://nestjs-kanban-board.vercel.app/projects",
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
+    const testResponse = await fetch(`{API_BASE_URL}/projects`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    });
     console.log(
       "🧪 Test API response:",
       testResponse.status,

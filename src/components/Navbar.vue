@@ -15,9 +15,9 @@
         
         <!-- Breadcrumb/Title -->
         <div class="flex items-center gap-2 lg:gap-4">
-          <h2 class="text-lg lg:text-xl font-semibold text-gray-800 dark:text-gray-100 truncate max-w-[150px] sm:max-w-[250px] lg:max-w-none">
+          <!-- <h2 class="text-lg lg:text-xl font-semibold text-gray-800 dark:text-gray-100 truncate max-w-[150px] sm:max-w-[250px] lg:max-w-none">
             {{ currentProject?.name || "Select a Project" }}
-          </h2>
+          </h2> -->
           <div
             v-if="currentProject"
             class="text-xs lg:text-sm text-gray-500 dark:text-gray-400 hidden sm:block"

@@ -51,36 +51,7 @@
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Tags
           </label>
-          <div class="flex flex-wrap gap-2 mb-2">
-            <span
-              v-for="tag in localForm.tags"
-              :key="tag"
-              class="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm flex items-center gap-1"
-            >
-              {{ tag }}
-              <button
-                type="button"
-                @click="removeTag(tag)"
-                class="text-blue-600 hover:text-blue-800"
-              >
-                ×
-              </button>
-            </span>
-          </div>
-          <div class="flex gap-2">
-            <input
-              v-model="newTag"
-              @keydown.enter="addTag"
-              placeholder="Add a tag and press Enter"
-              class="flex-1 px-3 py-2 border rounded-lg dark:bg-gray-700 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-            />
-            <button
-              @click="addTag"
-              class="px-4 py-2 bg-gray-200 dark:bg-gray-600 rounded-lg"
-            >
-              Add
-            </button>
-          </div>
+          <TagInput v-model:tags="localForm.tags" />
         </div>
 
         <!-- Priority -->
@@ -156,6 +127,8 @@
               <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-600"></div>
             </div>
           </div>
+          
+         
           <p v-if="availableUsers.length === 0 && !loadingUsers" class="text-sm text-gray-500 dark:text-gray-400 mt-1">
             No users available
           </p>
@@ -192,17 +165,17 @@
 </template>
 
 <script setup>
-import { reactive, watch, nextTick, ref, computed, onMounted } from "vue";
+import { reactive, watch, nextTick, ref, computed } from "vue";
 import { useUser } from "@clerk/vue";
 import TiptapEditor from "./TiptapEditor.vue";
+import TagInput from "./TagInput.vue";
 import { usersAPI } from "../api/user";
-
 
 const props = defineProps({
   visible: Boolean,
   task: Object,
   isCloning: Boolean,
-  availableUsers: { // Use availableUsers prop instead of users
+  availableUsers: {
     type: Array,
     default: () => []
   }
@@ -216,7 +189,6 @@ const { user: currentClerkUser } = useUser();
 // State for users
 const loadingUsers = ref(false);
 const allUsers = ref([]);
-const newTag = ref("");
 
 // Local form state
 const localForm = reactive({
@@ -240,16 +212,60 @@ const isFormValid = computed(() => {
   return localForm.title.trim() && localForm.dueDate;
 });
 
-// Tag management functions
-function addTag() {
-  if (newTag.value.trim() && !localForm.tags.includes(newTag.value.trim())) {
-    localForm.tags.push(newTag.value.trim());
-    newTag.value = "";
+// Function to find the correct Clerk user ID for the assigned user
+function findAssignedUserClerkId(task) {
+  if (!task) return "";
+  
+  console.log("🔍 Finding assigned user for task:", task);
+  
+  // Case 1: Task has assignedUser object with clerkId
+  if (task.assignedUser && task.assignedUser.clerkId) {
+    console.log("✅ Using assignedUser.clerkId:", task.assignedUser.clerkId);
+    return task.assignedUser.clerkId;
   }
-}
-
-function removeTag(tagToRemove) {
-  localForm.tags = localForm.tags.filter(tag => tag !== tagToRemove);
+  
+  // Case 2: Task has assignedUser object with email (example email format)
+  if (task.assignedUser && task.assignedUser.email) {
+    console.log("🔍 Looking for user by email:", task.assignedUser.email);
+    
+    // Try to find user by exact email match
+    const userByEmail = availableUsers.value.find(u => u.email === task.assignedUser.email);
+    if (userByEmail) {
+      console.log("✅ Found user by exact email match:", userByEmail.id);
+      return userByEmail.id;
+    }
+    
+    // Try to extract Clerk ID from example email format
+    if (task.assignedUser.email.includes('@example.com')) {
+      const emailMatch = task.assignedUser.email.match(/user_([^@]+)@example\.com/);
+      if (emailMatch) {
+        const clerkIdFromEmail = `user_${emailMatch[1]}`;
+        console.log("🔍 Extracted Clerk ID from email:", clerkIdFromEmail);
+        
+        // Check if this user exists in availableUsers
+        const userExists = availableUsers.value.find(u => u.id === clerkIdFromEmail);
+        if (userExists) {
+          console.log("✅ User exists with extracted Clerk ID:", clerkIdFromEmail);
+          return clerkIdFromEmail;
+        }
+      }
+    }
+  }
+  
+  // Case 3: Task has assignedUserId (local database ID)
+  if (task.assignedUserId) {
+    console.log("🔍 Looking for user by local ID:", task.assignedUserId);
+    
+    // Try to find user by localId in availableUsers
+    const userByLocalId = availableUsers.value.find(u => u.localId === task.assignedUserId);
+    if (userByLocalId) {
+      console.log("✅ Found user by localId:", userByLocalId.id);
+      return userByLocalId.id;
+    }
+  }
+  
+  console.log("❌ No assigned user found");
+  return "";
 }
 
 // Watch for task changes and update local form
@@ -257,6 +273,11 @@ watch(
   () => props.task,
   async (newTask) => {
     if (newTask) {
+      console.log("🔄 Task updated, populating form...");
+      
+      // Find the correct assigned user Clerk ID
+      const assignedUserClerkId = findAssignedUserClerkId(newTask);
+      
       Object.assign(localForm, {
         id: newTask.id,
         title: newTask.title,
@@ -264,9 +285,10 @@ watch(
         tags: [...(newTask.tags || [])],
         priority: newTask.priority || "MEDIUM",
         dueDate: formatDateForInput(newTask.dueDate),
-        // Map assigned user - use clerkId if available, otherwise use the ID
-        assignedUser: newTask.assignedUser?.clerkId || newTask.assignedUserId || "",
+        assignedUser: assignedUserClerkId,
       });
+
+      console.log("✅ Form populated with assignedUser:", localForm.assignedUser);
 
       await nextTick();
     }
@@ -274,50 +296,47 @@ watch(
   { immediate: true, deep: true }
 );
 
-// Watch for modal visibility to fetch users and reset form
+// Watch for availableUsers changes to re-resolve assigned user when users are loaded
 watch(
-  () => props.visible,
-  async (visible) => {
-    if (visible) {
-      // Fetch users if not provided via props
-      if (props.availableUsers.length === 0) {
-        await fetchUsers();
-      }
-    } else {
-      newTag.value = "";
+  availableUsers,
+  (newUsers) => {
+    if (newUsers.length > 0 && props.task && props.visible) {
+      console.log("🔄 Available users updated, re-resolving assigned user...");
+      const assignedUserClerkId = findAssignedUserClerkId(props.task);
+      localForm.assignedUser = assignedUserClerkId;
+      console.log("✅ Re-resolved assignedUser:", localForm.assignedUser);
     }
-  }
+  },
+  { deep: true }
 );
 
-// Fetch users from backend
-async function fetchUsers() {
-  if (loadingUsers.value) return;
-  
-  try {
-    loadingUsers.value = true;
-    console.log("🔄 Fetching users for edit modal...");
-    
-    const response = await usersAPI.getAll();
-    allUsers.value = response.data || [];
-    
-    console.log(`✅ Loaded ${allUsers.value.length} users for edit modal`);
-  } catch (error) {
-    console.error("❌ Failed to fetch users for edit modal:", error);
-    
-    // Fallback: use current user only
-    if (currentClerkUser.value) {
-      allUsers.value = [{
-        id: currentClerkUser.value.id, // Clerk user ID
-        name: currentClerkUser.value.fullName || 
-              currentClerkUser.value.primaryEmailAddress?.emailAddress || 
-              'Current User',
-        email: currentClerkUser.value.primaryEmailAddress?.emailAddress,
-      }];
+// Watch for modal visibility to fetch users
+// In EditTaskModal, update the watch for task changes:
+watch(
+  () => props.task,
+  async (newTask) => {
+    if (newTask) {
+      console.log("🔄 Task updated in modal, populating form:", newTask);
+      
+      // Use the assignedUser value that was already resolved in startEdit
+      Object.assign(localForm, {
+        id: newTask.id,
+        title: newTask.title,
+        description: newTask.description || "",
+        tags: [...(newTask.tags || [])],
+        priority: newTask.priority || "MEDIUM",
+        dueDate: formatDateForInput(newTask.dueDate),
+        assignedUser: newTask.assignedUser || "", // Use the pre-resolved value
+      });
+
+      console.log("✅ Modal form populated with assignedUser:", localForm.assignedUser);
+
+      await nextTick();
     }
-  } finally {
-    loadingUsers.value = false;
-  }
-}
+  },
+  { immediate: true, deep: true }
+);
+
 
 function formatDateForInput(dateString) {
   if (!dateString) return '';
@@ -351,7 +370,6 @@ function onSave() {
   const taskData = { 
     ...localForm,
     dueDate: ensureISODate(localForm.dueDate),
-    // assignedUser remains as Clerk user ID - backend will handle mapping
   };
   
   console.log("📤 Saving task with data:", taskData);
@@ -365,7 +383,6 @@ function onClone() {
   const cloneData = { 
     ...localForm,
     dueDate: ensureISODate(localForm.dueDate),
-    // assignedUser remains as Clerk user ID - backend will handle mapping
   };
   
   console.log("📤 Cloning task with data:", cloneData);
