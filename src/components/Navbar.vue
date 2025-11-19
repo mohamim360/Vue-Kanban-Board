@@ -18,12 +18,12 @@
           <!-- <h2 class="text-lg lg:text-xl font-semibold text-gray-800 dark:text-gray-100 truncate max-w-[150px] sm:max-w-[250px] lg:max-w-none">
             {{ currentProject?.name || "Select a Project" }}
           </h2> -->
-          <div
+          <!-- <div
             v-if="currentProject"
             class="text-xs lg:text-sm text-gray-500 dark:text-gray-400 hidden sm:block"
           >
             {{ currentProject.taskCount || 0 }} tasks
-          </div>
+          </div> -->
         </div>
       </div>
 
