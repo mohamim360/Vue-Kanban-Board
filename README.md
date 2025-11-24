@@ -2,7 +2,30 @@
 
 A modern, full-featured Kanban board application built with Vue 3 and a robust backend API, featuring user authentication via Clerk, real-time project management, and collaborative task tracking.
 
+
+
+## 📸 Screenshots
+
+### Hame Page   
+
 ![Kanban Board Interface](./public/pro.PNG)
+
+### Light Mode
+![Light Mode - Kanban Board](./public/pro1.PNG)
+
+### Dark Mode
+![Dark Mode - Kanban Board](./public/dark.PNG)
+
+### Mobile View
+![Mobile Responsive Design](./public/mobile.PNG)
+
+### Task Editing
+![Edit Task Modal](./public/edit.PNG)
+
+## 🔗 Links
+
+- [Backend Repository](https://github.com/mohamim360/nestjs-kanban-board)
+- [Live Demo](https://vue-kanban-board-weld.vercel.app)
 
 ## 🌟 Features
 
@@ -58,19 +81,6 @@ A modern, full-featured Kanban board application built with Vue 3 and a robust b
 - **User Tooltips**: Hover over avatars to see user details
 - **Creation Timestamps**: Track when tasks were created
 
-## 📸 Screenshots
-
-### Light Mode
-![Light Mode - Kanban Board](./public/pro1.PNG)
-
-### Dark Mode
-![Dark Mode - Kanban Board](./public/dark.PNG)
-
-### Mobile View
-![Mobile Responsive Design](./public/mobile.PNG)
-
-### Task Editing
-![Edit Task Modal](./public/edit.PNG)
 
 ## 🏗️ Architecture
 
@@ -296,11 +306,8 @@ The build outputs to the `dist/` directory and is optimized for performance.
 - [ ] Analytics dashboard
 - [ ] Export to CSV/PDF
 
-## 🔗 Links
 
-- [Backend Repository](https://github.com/mohamim360/nestjs-kanban-board)
-- [Live Demo](https://vue-kanban-board-weld.vercel.app)
 
 ---
 
-Made with ❤️ using Vue 3, Tailwind CSS, and Clerk
+Made using Vue 3, Tailwind CSS, and Clerk
